@@ -137,6 +137,13 @@
       display: flex; align-items: center; justify-content: center;
       border-radius: 6px;
     }
+    /* Avatar image inside name tile */
+    .ti .av {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      border-radius: 4px;
+      display: block;
+    }
     /* Name tile */
     .nt .ti {
       background: #180a02;
@@ -303,6 +310,15 @@ const FAMILY = [
   { id: 'jerry',   name: 'Jerry',   emoji: '⛷️' },
   { id: 'paul',    name: 'Paul',    emoji: '🐶' },
 ];
+
+// Preload avatar images — keyed by family member id.
+// Silent fail: if no file exists the name text is used instead.
+const AVATARS = {};
+FAMILY.forEach(m => {
+  const img = new Image();
+  img.onload = () => { AVATARS[m.id] = img; };
+  img.src = `avatars/${m.id}.png`;
+});
 
 // stopProb: probability a growing path stops at each step.
 // Lower = longer paths = denser grid = harder routing.
@@ -473,9 +489,18 @@ const UI = {
       const c = this.cell(ep.cellIndex);
       const isName = ep.kind === 'name';
       c.className = `cell ep ${isName ? 'nt' : 'et'} p${ep.pairIndex}`;
+      const member = S.family[ep.pairIndex];
       const inner = document.createElement('div');
       inner.className = 'ti';
-      inner.textContent = isName ? S.family[ep.pairIndex].name : S.family[ep.pairIndex].emoji;
+      if (isName && AVATARS[member.id]) {
+        const img = document.createElement('img');
+        img.src = AVATARS[member.id].src;
+        img.alt = member.name;
+        img.className = 'av';
+        inner.appendChild(img);
+      } else {
+        inner.textContent = isName ? member.name : member.emoji;
+      }
       c.appendChild(inner);
     }
   },
