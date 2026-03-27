@@ -259,7 +259,7 @@
   </button>
   <button class="diff-btn diff-h" onclick="Game.start('hard')">
     <span class="diff-n">Hard</span>
-    <span class="diff-d">All 6 · no hints · fill every cell</span>
+    <span class="diff-d">8 pairs · no hints · dense paths</span>
   </button>
   <button class="btn btn-s" onclick="UI.showScreen('title')" style="margin-top:6px">← Back</button>
 </div>
@@ -322,10 +322,11 @@ FAMILY.forEach(m => {
 
 // stopProb: probability a growing path stops at each step.
 // Lower = longer paths = denser grid = harder routing.
+// minFill: fraction of cells that must be covered by paths (0 = no requirement).
 const DIFFICULTY_CONFIG = {
-  easy:   { pairs: 3, pCols: 5, pRows: 7,  colourHints: true,  stopProb: 0.20 },
-  medium: { pairs: 5, pCols: 6, pRows: 9,  colourHints: false, stopProb: 0.12 },
-  hard:   { pairs: 7, pCols: 6, pRows: 10, colourHints: false, stopProb: 0.06 },
+  easy:   { pairs: 3, pCols: 5, pRows: 7,  colourHints: true,  stopProb: 0.20, minFill: 0.00 },
+  medium: { pairs: 5, pCols: 6, pRows: 9,  colourHints: false, stopProb: 0.12, minFill: 0.00 },
+  hard:   { pairs: 8, pCols: 6, pRows: 10, colourHints: false, stopProb: 0.05, minFill: 0.78 },
 };
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -445,6 +446,9 @@ const LevelGen = {
       }
 
       if (!ok) continue;
+
+      const filled = grid.filter(v => v !== -1).length;
+      if (cfg.minFill > 0 && filled / (cols * rows) < cfg.minFill) continue;
 
       return { family, endpoints };
     }
