@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#1a0800">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lanzarote Fever">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+  <title>Lanzarote Fever</title>
+  <style>
+    /* ── Reset ───────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #0d0400;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      color: #fff;
+    }
+
+    /* ── Screens ─────────────────────────────────────────────── */
+    .screen {
+      display: none;
+      position: fixed; inset: 0;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #1a0800;
+      padding:
+        max(env(safe-area-inset-top,  10px), 10px)
+        max(env(safe-area-inset-right, 12px), 12px)
+        max(env(safe-area-inset-bottom,10px), 10px)
+        max(env(safe-area-inset-left, 12px), 12px);
+    }
+    .screen.active { display: flex; }
+
+    /* ── Title ───────────────────────────────────────────────── */
+    #sc-title {
+      gap: 18px;
+      background: radial-gradient(ellipse at 50% 90%, #3d1200 0%, #1a0800 55%);
+    }
+    .t-vol  { font-size: 72px; line-height: 1; filter: drop-shadow(0 0 24px #ff6600); }
+    .t-name {
+      font-size: clamp(30px, 9vw, 44px);
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-align: center;
+      line-height: 1.1;
+      background: linear-gradient(180deg, #ffaa44 0%, #ff5500 55%, #cc2200 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 2px 10px rgba(255,80,0,0.5));
+    }
+    .t-sub  { font-size: 13px; letter-spacing: 4px; text-transform: uppercase; color: #ff8040; opacity: .75; }
+
+    /* ── Difficulty ──────────────────────────────────────────── */
+    #sc-difficulty {
+      gap: 14px;
+      background: radial-gradient(ellipse at 50% 90%, #2a0e00 0%, #1a0800 55%);
+    }
+    .sc-hd { font-size: 20px; font-weight: 700; color: #ff8844; margin-bottom: 4px; }
+    .diff-btn {
+      width: min(340px, 88vw);
+      padding: 14px 18px;
+      background: #221008;
+      border: 2px solid #3a1808;
+      border-radius: 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: transform .1s;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .diff-btn:active { transform: scale(.97); }
+    .diff-n { font-size: 20px; font-weight: 800; display: block; }
+    .diff-d { font-size: 12px; color: rgba(255,255,255,.55); line-height: 1.4; }
+    .diff-e { border-color: #ff6600; } .diff-e .diff-n { color: #ff8844; }
+    .diff-m { border-color: #ff2200; } .diff-m .diff-n { color: #ff5533; }
+    .diff-h { border-color: #aa44ff; } .diff-h .diff-n { color: #cc77ff; }
+
+    /* ── Game screen ─────────────────────────────────────────── */
+    #sc-game {
+      justify-content: flex-start;
+      padding-top:    max(env(safe-area-inset-top,    8px), 8px);
+      padding-bottom: max(env(safe-area-inset-bottom, 8px), 8px);
+      padding-left:   max(env(safe-area-inset-left,   8px), 8px);
+      padding-right:  max(env(safe-area-inset-right,  8px), 8px);
+    }
+    #hud {
+      width: 100%; flex: 0 0 auto;
+      display: flex; align-items: center;
+      padding: 4px 2px 10px;
+    }
+    #hud-back, #hud-undo {
+      background: none; border: none;
+      color: #ff8844; font-size: 24px;
+      cursor: pointer; line-height: 1;
+      transition: opacity .2s;
+    }
+    #hud-back { padding: 2px 10px 2px 2px; }
+    #hud-undo { padding: 2px 2px 2px 10px; }
+    #hud-undo:disabled { opacity: .2; cursor: default; }
+    #hud-info {
+      flex: 1; text-align: center;
+      font-size: 13px; font-weight: 600;
+      letter-spacing: 1px; text-transform: uppercase; color: #ff8844;
+    }
+    #grid-wrap {
+      flex: 1 1 auto;
+      display: flex; align-items: center; justify-content: center;
+      width: 100%; overflow: hidden;
+    }
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(var(--gc,5), var(--cs,48px));
+      grid-template-rows:    repeat(var(--gr,7), var(--cs,48px));
+      gap: 3px;
+      touch-action: none;
+      user-select: none; -webkit-user-select: none;
+    }
+
+    /* ── Cells ───────────────────────────────────────────────── */
+    .cell {
+      background: #221008;
+      border: 1px solid #3a1a08;
+      border-radius: 6px;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    /* Tile inner — shared */
+    .ti {
+      width: 86%; height: 86%;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+    }
+    /* Name tile */
+    .nt .ti {
+      background: #180a02;
+      border: 2px solid #4a2010;
+      font-weight: 700;
+      font-size: calc(var(--cs, 48px) * 0.21);
+      line-height: 1.15;
+      text-align: center;
+      color: #fff;
+      padding: 2px;
+      overflow: hidden;
+      word-break: break-word;
+    }
+    /* Emoji tile */
+    .et .ti {
+      font-size: calc(var(--cs, 48px) * 0.54);
+      line-height: 1;
+    }
+
+    /* Drag path */
+    .cell.drag { background: #361500; box-shadow: inset 0 0 0 1px rgba(255,110,0,.35); }
+
+    /* Locked paths — pair colours */
+    .lk.p0 { background:#381400; box-shadow:inset 0 0 0 2px #ff6600, 0 0 5px rgba(255,102,0,.25); }
+    .lk.p1 { background:#380400; box-shadow:inset 0 0 0 2px #ff2200, 0 0 5px rgba(255,34,0,.25);  }
+    .lk.p2 { background:#373000; box-shadow:inset 0 0 0 2px #ffdd00, 0 0 5px rgba(255,221,0,.25); }
+    .lk.p3 { background:#003430; box-shadow:inset 0 0 0 2px #00ccaa, 0 0 5px rgba(0,204,170,.25); }
+    .lk.p4 { background:#230733; box-shadow:inset 0 0 0 2px #aa44ff, 0 0 5px rgba(170,68,255,.25);}
+    .lk.p5 { background:#183400; box-shadow:inset 0 0 0 2px #88ff00, 0 0 5px rgba(136,255,0,.25); }
+
+    /* Locked endpoints glow stronger */
+    .lk.ep.p0 { box-shadow:inset 0 0 0 2px #ff6600, 0 0 12px rgba(255,102,0,.5); }
+    .lk.ep.p1 { box-shadow:inset 0 0 0 2px #ff2200, 0 0 12px rgba(255,34,0,.5);  }
+    .lk.ep.p2 { box-shadow:inset 0 0 0 2px #ffdd00, 0 0 12px rgba(255,221,0,.5); }
+    .lk.ep.p3 { box-shadow:inset 0 0 0 2px #00ccaa, 0 0 12px rgba(0,204,170,.5); }
+    .lk.ep.p4 { box-shadow:inset 0 0 0 2px #aa44ff, 0 0 12px rgba(170,68,255,.5);}
+    .lk.ep.p5 { box-shadow:inset 0 0 0 2px #88ff00, 0 0 12px rgba(136,255,0,.5); }
+
+    /* Locked endpoint tile-inner border matches colour */
+    .lk.nt.p0 .ti,.lk.et.p0 .ti { border-color:#ff6600; }
+    .lk.nt.p1 .ti,.lk.et.p1 .ti { border-color:#ff2200; }
+    .lk.nt.p2 .ti,.lk.et.p2 .ti { border-color:#ffdd00; }
+    .lk.nt.p3 .ti,.lk.et.p3 .ti { border-color:#00ccaa; }
+    .lk.nt.p4 .ti,.lk.et.p4 .ti { border-color:#aa44ff; }
+    .lk.nt.p5 .ti,.lk.et.p5 .ti { border-color:#88ff00; }
+
+    /* Easy mode colour hints */
+    #grid.hints .ep.p0 .ti { border-color:#ff660055; }
+    #grid.hints .ep.p1 .ti { border-color:#ff220055; }
+    #grid.hints .ep.p2 .ti { border-color:#ffdd0055; }
+    #grid.hints .ep.p3 .ti { border-color:#00ccaa55; }
+    #grid.hints .ep.p4 .ti { border-color:#aa44ff55; }
+    #grid.hints .ep.p5 .ti { border-color:#88ff0055; }
+
+    /* Error flash */
+    @keyframes flash-err {
+      0%   { background:#221008; box-shadow:none; }
+      25%  { background:#5a0000; box-shadow:inset 0 0 0 2px #ff0000; }
+      80%  { background:#5a0000; box-shadow:inset 0 0 0 2px #ff0000; }
+      100% { background:#221008; box-shadow:none; }
+    }
+    .cell.err { animation: flash-err .5s ease forwards; }
+
+    /* ── Win screen ──────────────────────────────────────────── */
+    #sc-win {
+      gap: 18px;
+      background: radial-gradient(ellipse at 50% 65%, #3d1800 0%, #1a0800 65%);
+    }
+    .win-ic  { font-size: 68px; }
+    .win-ttl { font-size: clamp(26px, 8vw, 36px); font-weight: 900; color: #ffcc44; text-align: center; }
+    .win-sub { font-size: 15px; color: rgba(255,255,255,.65); text-align: center; }
+
+    /* ── Shared buttons ──────────────────────────────────────── */
+    .btn {
+      padding: 13px 30px;
+      border-radius: 12px; border: none;
+      font-size: 17px; font-weight: 800;
+      cursor: pointer; letter-spacing: .3px;
+      transition: transform .1s, filter .1s;
+    }
+    .btn:active { transform: scale(.96); filter: brightness(.88); }
+    .btn-p {
+      background: linear-gradient(180deg, #ff7722 0%, #cc3300 100%);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(255,60,0,.4);
+    }
+    .btn-s {
+      background: #221008; border: 2px solid #4a2010;
+      color: #ff8844;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Title ──────────────────────────────────────────────────────── -->
+<div id="sc-title" class="screen active">
+  <div class="t-vol">🌋</div>
+  <h1 class="t-name">LANZAROTE<br>FEVER</h1>
+  <p class="t-sub">Family Connect</p>
+  <button class="btn btn-p" onclick="UI.showScreen('difficulty')">Play</button>
+</div>
+
+<!-- ── Difficulty ─────────────────────────────────────────────────── -->
+<div id="sc-difficulty" class="screen">
+  <h2 class="sc-hd">Choose Difficulty</h2>
+  <button class="diff-btn diff-e" onclick="Game.start('easy')">
+    <span class="diff-n">Easy</span>
+    <span class="diff-d">3 pairs · colour hints · small grid</span>
+  </button>
+  <button class="diff-btn diff-m" onclick="Game.start('medium')">
+    <span class="diff-n">Medium</span>
+    <span class="diff-d">5 pairs · no hints · who likes what?</span>
+  </button>
+  <button class="diff-btn diff-h" onclick="Game.start('hard')">
+    <span class="diff-n">Hard</span>
+    <span class="diff-d">All 6 · no hints · fill every cell</span>
+  </button>
+  <button class="btn btn-s" onclick="UI.showScreen('title')" style="margin-top:6px">← Back</button>
+</div>
+
+<!-- ── Game ───────────────────────────────────────────────────────── -->
+<div id="sc-game" class="screen">
+  <div id="hud">
+    <button id="hud-back" onclick="UI.showScreen('difficulty')">←</button>
+    <span id="hud-info">Easy · 0/3</span>
+    <button id="hud-undo" onclick="Game.undo()" disabled>↩</button>
+  </div>
+  <div id="grid-wrap">
+    <div id="grid"></div>
+  </div>
+</div>
+
+<!-- ── Win ────────────────────────────────────────────────────────── -->
+<div id="sc-win" class="screen">
+  <div class="win-ic">🎉</div>
+  <h2 class="win-ttl">You got it!</h2>
+  <p class="win-sub" id="win-sub">All pairs connected!</p>
+  <button class="btn btn-p" onclick="Game.start(S.difficulty)">Next Puzzle</button>
+  <button class="btn btn-s" onclick="UI.showScreen('difficulty')">Change Difficulty</button>
+</div>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════════════════════════
+// FAMILY DATA — add more members here as { id, name, emoji }
+// ══════════════════════════════════════════════════════════════════════════
+
+const FAMILY = [
+  { id: 'emily',   name: 'Emily',   emoji: '🎵' },
+  { id: 'amy',     name: 'Amy',     emoji: '🤸' },
+  { id: 'bethany', name: 'Bethany', emoji: '🐭' },
+  { id: 'micah',   name: 'Micah',   emoji: '🏏' },
+  { id: 'clara',   name: 'Clara',   emoji: '🍬' },
+  { id: 'esther',  name: 'Esther',  emoji: '🐯' },
+];
+
+const DIFFICULTY_CONFIG = {
+  easy:   { pairs: 3, pCols: 5, pRows: 7,  colourHints: true,  fillAll: false },
+  medium: { pairs: 5, pCols: 6, pRows: 9,  colourHints: false, fillAll: false },
+  hard:   { pairs: 6, pCols: 7, pRows: 11, colourHints: false, fillAll: true  },
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════════════════
+
+const S = {
+  screen: 'title',
+  difficulty: 'easy',
+  cols: 5, rows: 7,
+  cellSize: 48,
+  family: [],       // FamilyMember[] for this level
+  endpoints: [],    // { pairIndex, kind:'name'|'emoji', cellIndex }[]
+  locked: [],       // boolean[] by pairIndex
+  paths: [],        // number[][] — locked paths
+  lockedGrid: [],   // flat number[] — pairIndex or -1
+  undoStack: [],    // pairIndex[] — order pairs were locked, most recent last
+  drag: null,       // { pairIndex, startKind, path, lastCell } | null
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// LEVEL GENERATION
+// ══════════════════════════════════════════════════════════════════════════
+
+const LevelGen = {
+
+  shuffle(a) {
+    a = [...a];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = 0 | (Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  },
+
+  // Returns valid orthogonal neighbours of cellIdx
+  adj(idx, cols, rows) {
+    const r = (idx / cols) | 0, c = idx % cols, out = [];
+    if (r > 0)        out.push(idx - cols);
+    if (r < rows - 1) out.push(idx + cols);
+    if (c > 0)        out.push(idx - 1);
+    if (c < cols - 1) out.push(idx + 1);
+    return out;
+  },
+
+  // Flood-fill count of empty cells reachable from startIdx
+  floodCount(grid, startIdx, cols, rows) {
+    if (grid[startIdx] !== -1) return 0;
+    const seen = new Uint8Array(grid.length);
+    seen[startIdx] = 1;
+    const q = [startIdx];
+    let n = 1;
+    while (q.length) {
+      for (const nb of this.adj(q.pop(), cols, rows)) {
+        if (!seen[nb] && grid[nb] === -1) { seen[nb] = 1; q.push(nb); n++; }
+      }
+    }
+    return n;
+  },
+
+  // Would marking cellIdx as used isolate any empty cells?
+  wouldIsolate(grid, cellIdx, cols, rows) {
+    grid[cellIdx] = 999;
+    let empties = 0, first = -1;
+    for (let i = 0; i < grid.length; i++) { if (grid[i] === -1) { empties++; if (first < 0) first = i; } }
+    const result = empties > 0 && this.floodCount(grid, first, cols, rows) < empties;
+    grid[cellIdx] = -1;
+    return result;
+  },
+
+  // Random walk through empty cells; returns path or null
+  growPath(grid, cols, rows, stopProb) {
+    const empty = [];
+    for (let i = 0; i < grid.length; i++) if (grid[i] === -1) empty.push(i);
+    if (empty.length < 2) return null;
+
+    const start = empty[(Math.random() * empty.length) | 0];
+    const path = [start];
+    const seen = new Set([start]);
+
+    for (let step = 0; step < grid.length; step++) {
+      const cur = path[path.length - 1];
+      const nbrs = this.adj(cur, cols, rows).filter(n => grid[n] === -1 && !seen.has(n));
+      if (!nbrs.length) break;
+
+      // Prefer moves that don't isolate the remaining empty region
+      const shuffled = this.shuffle(nbrs);
+      const safe = shuffled.filter(n => !this.wouldIsolate(grid, n, cols, rows));
+      const next = (safe.length ? safe : shuffled)[0];
+
+      path.push(next);
+      seen.add(next);
+      if (path.length >= 3 && Math.random() < stopProb) break;
+    }
+
+    return path.length >= 2 ? path : null;
+  },
+
+  // Generate a level; returns { family, endpoints }
+  generate(difficulty, cols, rows) {
+    const cfg = DIFFICULTY_CONFIG[difficulty];
+    const stopProb = cfg.fillAll ? 0.03 : 0.13;
+
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const family = this.shuffle(FAMILY).slice(0, cfg.pairs);
+      const grid = new Array(cols * rows).fill(-1);
+      const endpoints = [];
+      let ok = true;
+
+      for (let pi = 0; pi < cfg.pairs; pi++) {
+        const path = this.growPath(grid, cols, rows, stopProb);
+        if (!path) { ok = false; break; }
+        path.forEach(ci => { grid[ci] = pi; });
+        endpoints.push(
+          { pairIndex: pi, kind: 'name',  cellIndex: path[0] },
+          { pairIndex: pi, kind: 'emoji', cellIndex: path[path.length - 1] }
+        );
+      }
+
+      if (!ok) continue;
+      if (cfg.fillAll && grid.includes(-1)) continue;
+
+      return { family, endpoints };
+    }
+
+    // Fallback: relax the hard constraint
+    return this.generate(difficulty === 'hard' ? 'medium' : 'easy', cols, rows);
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// UI / RENDERER
+// ══════════════════════════════════════════════════════════════════════════
+
+const UI = {
+  showScreen(name) {
+    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+    document.getElementById('sc-' + name).classList.add('active');
+    S.screen = name;
+  },
+
+  // Direct child access — O(1), no querySelector needed
+  cell(i) { return document.getElementById('grid').children[i]; },
+
+  buildGrid() {
+    const g = document.getElementById('grid');
+    g.innerHTML = '';
+    const root = document.documentElement;
+    root.style.setProperty('--cs', S.cellSize + 'px');
+    root.style.setProperty('--gc', S.cols);
+    root.style.setProperty('--gr', S.rows);
+    g.classList.toggle('hints', DIFFICULTY_CONFIG[S.difficulty].colourHints);
+    for (let i = 0; i < S.cols * S.rows; i++) {
+      const d = document.createElement('div');
+      d.className = 'cell';
+      g.appendChild(d);
+    }
+    this._placeEndpoints();
+  },
+
+  _placeEndpoints() {
+    for (const ep of S.endpoints) {
+      const c = this.cell(ep.cellIndex);
+      const isName = ep.kind === 'name';
+      c.className = `cell ep ${isName ? 'nt' : 'et'} p${ep.pairIndex}`;
+      const inner = document.createElement('div');
+      inner.className = 'ti';
+      inner.textContent = isName ? S.family[ep.pairIndex].name : S.family[ep.pairIndex].emoji;
+      c.appendChild(inner);
+    }
+  },
+
+  updateHUD() {
+    const solved = S.locked.filter(Boolean).length;
+    const diff = S.difficulty[0].toUpperCase() + S.difficulty.slice(1);
+    document.getElementById('hud-info').textContent = `${diff} · ${solved}/${S.family.length}`;
+    document.getElementById('hud-undo').disabled = S.undoStack.length === 0;
+  },
+
+  // Apply locked styling to all cells in a path
+  lockPath(pi) {
+    for (const ci of S.paths[pi]) {
+      const c = this.cell(ci);
+      if (!c) continue;
+      c.classList.remove('drag', 'err');
+      c.classList.add('lk', `p${pi}`);
+    }
+  },
+
+  // Add or remove drag-highlight from a list of cell indices
+  setDrag(path, on) {
+    for (const ci of path) {
+      const c = this.cell(ci);
+      if (c && !c.classList.contains('lk')) c.classList.toggle('drag', on);
+    }
+  },
+
+  flashError(path) {
+    for (const ci of path) {
+      const c = this.cell(ci);
+      if (!c) continue;
+      c.classList.remove('drag');
+      void c.offsetWidth;           // restart animation
+      c.classList.add('err');
+      c.addEventListener('animationend', () => c.classList.remove('err'), { once: true });
+    }
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// GAME LOGIC
+// ══════════════════════════════════════════════════════════════════════════
+
+const Game = {
+
+  _cellSize(cols, rows) {
+    const hud = 56, pad = 20;
+    const w = window.innerWidth - pad;
+    const h = window.innerHeight - hud - pad;
+    return Math.max(32, Math.min(68, Math.floor(w / cols), Math.floor(h / rows)));
+  },
+
+  start(difficulty) {
+    const cfg = DIFFICULTY_CONFIG[difficulty];
+    S.difficulty = difficulty;
+    const portrait = window.innerHeight >= window.innerWidth;
+    S.cols = portrait ? cfg.pCols : cfg.pRows;
+    S.rows = portrait ? cfg.pRows : cfg.pCols;
+    S.cellSize = this._cellSize(S.cols, S.rows);
+
+    const lvl = LevelGen.generate(difficulty, S.cols, S.rows);
+    S.family     = lvl.family;
+    S.endpoints  = lvl.endpoints;
+    S.locked     = new Array(cfg.pairs).fill(false);
+    S.paths      = new Array(cfg.pairs).fill(null);
+    S.lockedGrid = new Array(S.cols * S.rows).fill(-1);
+    S.undoStack  = [];
+    S.drag       = null;
+
+    UI.showScreen('game');
+    UI.buildGrid();
+    UI.updateHUD();
+    Input.attach();
+  },
+
+  dragStart(ci) {
+    const ep = S.endpoints.find(e => e.cellIndex === ci);
+    if (!ep || S.locked[ep.pairIndex]) return;
+    if (S.drag) UI.setDrag(S.drag.path, false);
+    S.drag = { pairIndex: ep.pairIndex, startKind: ep.kind, path: [ci], lastCell: ci };
+    UI.setDrag(S.drag.path, true);
+  },
+
+  dragMove(ci) {
+    if (!S.drag || ci === S.drag.lastCell) return;
+    const { path, pairIndex } = S.drag;
+    const last = path[path.length - 1];
+
+    // Must be orthogonally adjacent to the current path end
+    if (!LevelGen.adj(last, S.cols, S.rows).includes(ci)) return;
+
+    // Backtrack if revisiting a cell in our own path
+    const pos = path.indexOf(ci);
+    if (pos !== -1) {
+      const removed = path.splice(pos + 1);
+      UI.setDrag(removed, false);
+      S.drag.lastCell = ci;
+      return;
+    }
+
+    // Stop extending once we've reached our own target endpoint
+    const atTarget = S.endpoints.find(
+      e => e.cellIndex === last && e.pairIndex === pairIndex && e.kind !== S.drag.startKind
+    );
+    if (atTarget) return;
+
+    // Blocked: cell is part of a completed (locked) path
+    if (S.lockedGrid[ci] !== -1) return;
+
+    // Blocked: cell is an endpoint belonging to a different pair
+    if (S.endpoints.some(e => e.cellIndex === ci && e.pairIndex !== pairIndex)) return;
+
+    path.push(ci);
+    S.drag.lastCell = ci;
+    const c = UI.cell(ci);
+    if (c && !c.classList.contains('lk')) c.classList.add('drag');
+  },
+
+  dragEnd() {
+    if (!S.drag) return;
+    const { pairIndex, startKind, path } = S.drag;
+    UI.setDrag(path, false);
+    S.drag = null;
+
+    if (path.length < 2) return;
+
+    const lastCi = path[path.length - 1];
+    const ep = S.endpoints.find(e => e.cellIndex === lastCi);
+    const expectedKind = startKind === 'name' ? 'emoji' : 'name';
+
+    if (ep && ep.pairIndex === pairIndex && ep.kind === expectedKind) {
+      // Correct match — lock the path
+      S.locked[pairIndex] = true;
+      S.paths[pairIndex] = path;
+      path.forEach(ci => { S.lockedGrid[ci] = pairIndex; });
+      S.undoStack.push(pairIndex);
+      UI.lockPath(pairIndex);
+      UI.updateHUD();
+      this._checkWin();
+    } else if (ep) {
+      // Wrong endpoint — flash red
+      UI.flashError(path);
+    }
+    // Released on empty cell — silent clear (already done above)
+  },
+
+  _checkWin() {
+    const cfg = DIFFICULTY_CONFIG[S.difficulty];
+    if (!S.locked.every(Boolean)) return;
+    if (cfg.fillAll && S.lockedGrid.includes(-1)) return;
+    setTimeout(() => {
+      document.getElementById('win-sub').textContent =
+        `All ${S.family.length} pairs connected!`;
+      UI.showScreen('win');
+    }, 350);
+  },
+
+  undo() {
+    if (!S.undoStack.length) return;
+    const pi = S.undoStack.pop();
+    const path = S.paths[pi];
+    if (!path) return;
+
+    // Restore grid state
+    path.forEach(ci => { S.lockedGrid[ci] = -1; });
+    S.locked[pi] = false;
+    S.paths[pi] = null;
+
+    // Restore cell visuals
+    for (const ci of path) {
+      const c = UI.cell(ci);
+      if (!c) continue;
+      c.classList.remove('lk');
+      // Non-endpoint cells also lose their pair colour
+      if (!c.classList.contains('ep')) c.classList.remove(`p${pi}`);
+    }
+
+    UI.updateHUD();
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// INPUT HANDLER
+// ══════════════════════════════════════════════════════════════════════════
+
+const Input = {
+  _g: null, _lx: 0, _ly: 0,
+
+  attach() {
+    const g = document.getElementById('grid');
+    if (this._g) this._detach(this._g);
+    this._g = g;
+    // Bind once; reuse across re-attaches
+    if (!this._bound) {
+      this._bound = {
+        pd: e => { e.preventDefault(); this._lx = e.clientX; this._ly = e.clientY; const ci = this._ci(e.clientX, e.clientY); if (ci >= 0) Game.dragStart(ci); },
+        pm: e => { e.preventDefault(); if (!S.drag) return; const dx = e.clientX - this._lx, dy = e.clientY - this._ly; if (dx*dx + dy*dy < (S.cellSize * 0.28)**2) return; this._lx = e.clientX; this._ly = e.clientY; const ci = this._ci(e.clientX, e.clientY); if (ci >= 0) Game.dragMove(ci); },
+        pu: ()  => Game.dragEnd(),
+        pc: ()  => { if (S.drag) { UI.setDrag(S.drag.path, false); S.drag = null; } },
+      };
+    }
+    g.addEventListener('pointerdown',   this._bound.pd);
+    g.addEventListener('pointermove',   this._bound.pm, { passive: false });
+    g.addEventListener('pointerup',     this._bound.pu);
+    g.addEventListener('pointercancel', this._bound.pc);
+  },
+
+  _detach(g) {
+    if (!this._bound) return;
+    g.removeEventListener('pointerdown',   this._bound.pd);
+    g.removeEventListener('pointermove',   this._bound.pm);
+    g.removeEventListener('pointerup',     this._bound.pu);
+    g.removeEventListener('pointercancel', this._bound.pc);
+  },
+
+  // Coordinate → cell index using grid bounding rect
+  _ci(x, y) {
+    if (!this._g) return -1;
+    const r = this._g.getBoundingClientRect();
+    const step = S.cellSize + 3;   // cellSize + gap (3px)
+    const col = ((x - r.left) / step) | 0;
+    const row = ((y - r.top)  / step) | 0;
+    if (col < 0 || col >= S.cols || row < 0 || row >= S.rows) return -1;
+    return row * S.cols + col;
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// ORIENTATION / RESIZE
+// ══════════════════════════════════════════════════════════════════════════
+
+let _rt;
+window.addEventListener('resize', () => {
+  clearTimeout(_rt);
+  _rt = setTimeout(() => { if (S.screen === 'game') Game.start(S.difficulty); }, 220);
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// PWA SERVICE WORKER
+// ══════════════════════════════════════════════════════════════════════════
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>

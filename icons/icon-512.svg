@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="100" fill="#1a0800"/>
+  <!-- Volcano body -->
+  <polygon points="256,72 42,438 470,438" fill="#4a2010"/>
+  <polygon points="256,72 96,438 416,438" fill="#5a2818"/>
+  <!-- Crater glow -->
+  <ellipse cx="256" cy="80"  rx="58" ry="24" fill="#cc3300"/>
+  <ellipse cx="256" cy="74"  rx="38" ry="16" fill="#ff5500"/>
+  <ellipse cx="256" cy="68"  rx="22" ry="10" fill="#ff9900"/>
+  <!-- Lava drips -->
+  <path d="M218,96 Q208,148 220,187" stroke="#ff4400" stroke-width="10" fill="none" stroke-linecap="round" opacity=".85"/>
+  <path d="M294,92 Q308,140 296,179" stroke="#ff2200" stroke-width="10" fill="none" stroke-linecap="round" opacity=".85"/>
+  <path d="M256,96 Q248,162 252,200" stroke="#ff6600" stroke-width="8"  fill="none" stroke-linecap="round" opacity=".6"/>
+  <!-- Ground base -->
+  <rect x="0" y="416" width="512" height="96" fill="#120600"/>
+  <!-- Lava pool -->
+  <ellipse cx="256" cy="416" rx="186" ry="22" fill="#3a0800"/>
+  <ellipse cx="256" cy="416" rx="120" ry="12" fill="#5a1400"/>
+</svg>
