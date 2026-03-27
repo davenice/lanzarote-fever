@@ -304,10 +304,12 @@ const FAMILY = [
   { id: 'paul',    name: 'Paul',    emoji: '🐶' },
 ];
 
+// stopProb: probability a growing path stops at each step.
+// Lower = longer paths = denser grid = harder routing.
 const DIFFICULTY_CONFIG = {
-  easy:   { pairs: 3, pCols: 5, pRows: 7,  colourHints: true,  fillAll: false },
-  medium: { pairs: 5, pCols: 6, pRows: 9,  colourHints: false, fillAll: false },
-  hard:   { pairs: 7, pCols: 7, pRows: 11, colourHints: false, fillAll: true  },
+  easy:   { pairs: 3, pCols: 5, pRows: 7,  colourHints: true,  stopProb: 0.20 },
+  medium: { pairs: 5, pCols: 6, pRows: 9,  colourHints: false, stopProb: 0.12 },
+  hard:   { pairs: 7, pCols: 6, pRows: 10, colourHints: false, stopProb: 0.06 },
 };
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -409,7 +411,6 @@ const LevelGen = {
   // Generate a level; returns { family, endpoints }
   generate(difficulty, cols, rows) {
     const cfg = DIFFICULTY_CONFIG[difficulty];
-    const stopProb = cfg.fillAll ? 0.03 : 0.13;
 
     for (let attempt = 0; attempt < 200; attempt++) {
       const family = this.shuffle(FAMILY).slice(0, cfg.pairs);
@@ -418,7 +419,7 @@ const LevelGen = {
       let ok = true;
 
       for (let pi = 0; pi < cfg.pairs; pi++) {
-        const path = this.growPath(grid, cols, rows, stopProb);
+        const path = this.growPath(grid, cols, rows, cfg.stopProb);
         if (!path) { ok = false; break; }
         path.forEach(ci => { grid[ci] = pi; });
         endpoints.push(
@@ -428,12 +429,11 @@ const LevelGen = {
       }
 
       if (!ok) continue;
-      if (cfg.fillAll && grid.includes(-1)) continue;
 
       return { family, endpoints };
     }
 
-    // Fallback: relax the hard constraint
+    // Fallback: relax constraints
     return this.generate(difficulty === 'hard' ? 'medium' : 'easy', cols, rows);
   },
 };
@@ -627,7 +627,6 @@ const Game = {
   _checkWin() {
     const cfg = DIFFICULTY_CONFIG[S.difficulty];
     if (!S.locked.every(Boolean)) return;
-    if (cfg.fillAll && S.lockedGrid.includes(-1)) return;
     setTimeout(() => {
       document.getElementById('win-sub').textContent =
         `All ${S.family.length} pairs connected!`;
