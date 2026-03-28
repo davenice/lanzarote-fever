@@ -186,13 +186,9 @@
       transition: opacity 0.35s ease;
     }
 
-    /* Advanced mode: fade content by age (0=hidden, 4=fully visible) */
-    #grid.advanced .tile .tile-face            { opacity: 0; }
-    #grid.advanced .tile[data-age="1"] .tile-face { opacity: 0.25; }
-    #grid.advanced .tile[data-age="2"] .tile-face { opacity: 0.50; }
-    #grid.advanced .tile[data-age="3"] .tile-face { opacity: 0.75; }
-    #grid.advanced .tile[data-age="4"] .tile-face { opacity: 1;    }
-    #grid.advanced .tile.matched .tile-face    { opacity: 1 !important; }
+    /* Advanced mode: opacity driven by --tile-opacity custom property set in JS */
+    #grid.advanced .tile .tile-face         { opacity: var(--tile-opacity, 0); }
+    #grid.advanced .tile.matched .tile-face { opacity: 1 !important; }
 
     /* Pair colours as custom properties */
     .p0 { --pc: #ff6600; } .p1 { --pc: #ff3300; }
@@ -250,9 +246,39 @@
     #build-ts {
       position: fixed; bottom: 6px; right: 8px;
       font-size: 10px; color: rgba(255,255,255,.45);
-      pointer-events: none; z-index: 999;
+      cursor: pointer; z-index: 999;
       font-family: monospace;
+      user-select: none;
     }
+    #build-ts:active { color: rgba(255,255,255,.8); }
+
+    /* Settings panel */
+    #settings-panel {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.75);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #settings-panel[hidden] { display: none; }
+    #settings-content {
+      background: #2a0e04; border: 2px solid #ff6600;
+      border-radius: 14px; padding: 28px 24px;
+      min-width: 260px; text-align: center;
+      display: flex; flex-direction: column; gap: 20px;
+      color: #fff;
+    }
+    #settings-content h3 { margin: 0; font-size: 16px; color: #ff8844; letter-spacing: 2px; text-transform: uppercase; }
+    .setting-row { display: flex; flex-direction: column; gap: 8px; }
+    .setting-label { font-size: 13px; color: rgba(255,255,255,.7); }
+    .setting-hint  { font-size: 11px; color: rgba(255,255,255,.4); }
+    .stepper { display: flex; align-items: center; justify-content: center; gap: 20px; }
+    .stepper button {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: #4a2010; border: 2px solid #ff6600;
+      color: #ff8844; font-size: 22px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .stepper button:active { background: #7a3010; }
+    #fade-steps-val { font-size: 32px; font-weight: 800; color: #ff8844; min-width: 44px; }
   </style>
 </head>
 <body>
@@ -313,6 +339,22 @@
 
 <div id="build-ts"></div>
 
+<div id="settings-panel" hidden>
+  <div id="settings-content">
+    <h3>Settings</h3>
+    <div class="setting-row">
+      <span class="setting-label">Fade steps (Advanced mode)</span>
+      <div class="stepper">
+        <button onclick="Settings.adjust(-1)">−</button>
+        <span id="fade-steps-val">4</span>
+        <button onclick="Settings.adjust(+1)">+</button>
+      </div>
+      <span class="setting-hint">Moves before a tile fades back to invisible</span>
+    </div>
+    <button class="btn btn-s" onclick="Settings.close()">Done</button>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -361,6 +403,30 @@ const DIFFICULTY_CONFIG = {
 };
 
 // ══════════════════════════════════════════════════════════════════════════
+// SETTINGS (persisted to localStorage)
+// ══════════════════════════════════════════════════════════════════════════
+
+const SETTINGS = {
+  fadeSteps: Math.max(1, Math.min(10, parseInt(localStorage.getItem('lf-fadeSteps') ?? '4', 10))),
+  save() { localStorage.setItem('lf-fadeSteps', String(this.fadeSteps)); },
+};
+
+const Settings = {
+  open() {
+    document.getElementById('fade-steps-val').textContent = SETTINGS.fadeSteps;
+    document.getElementById('settings-panel').hidden = false;
+  },
+  close() {
+    document.getElementById('settings-panel').hidden = true;
+  },
+  adjust(delta) {
+    SETTINGS.fadeSteps = Math.max(1, Math.min(10, SETTINGS.fadeSteps + delta));
+    SETTINGS.save();
+    document.getElementById('fade-steps-val').textContent = SETTINGS.fadeSteps;
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -377,7 +443,7 @@ const S = {
   animating: false,
   colourHints: false,
   advanced: false,
-  tileAge: null,   // Map: tileKey → age 0–4 (Advanced mode only)
+  tileAge: null,   // Map: tileKey → age 0–fadeSteps (Advanced mode only)
   tileEls: null,   // Map: tileKey → div element
 };
 
@@ -503,6 +569,12 @@ function tileKey(tile) {
   return tile.kind === 'wildcard' ? 'wild-' + tile.wIdx : tile.kind + '-' + tile.pairIndex;
 }
 
+// Set tile age and update --tile-opacity custom property for Advanced mode
+function _setAge(el, age) {
+  el.dataset.age = age;
+  el.style.setProperty('--tile-opacity', (age / SETTINGS.fadeSteps).toFixed(3));
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // UI
 // ══════════════════════════════════════════════════════════════════════════
@@ -570,10 +642,10 @@ const UI = {
       }
       div.appendChild(face);
 
-      // Age: 0 = hidden (Advanced), 4 = fully visible (normal modes)
-      const age = S.advanced ? 0 : 4;
+      // Age: 0 = hidden (Advanced), fadeSteps = fully visible (normal modes)
+      const age = S.advanced ? 0 : SETTINGS.fadeSteps;
       S.tileAge.set(tileKey(tile), age);
-      div.dataset.age = age;
+      _setAge(div, age);
 
       div.style.width  = cs + 'px';
       div.style.height = cs + 'px';
@@ -609,9 +681,9 @@ const UI = {
         S.tileEls.get('emoji-' + pi)?.classList.add('matched');
         if (S.advanced) {
           ['name-' + pi, 'emoji-' + pi].forEach(k => {
-            S.tileAge.set(k, 4);
+            S.tileAge.set(k, SETTINGS.fadeSteps);
             const el = S.tileEls.get(k);
-            if (el) el.dataset.age = 4;
+            if (el) _setAge(el, SETTINGS.fadeSteps);
           });
         }
       }
@@ -679,13 +751,13 @@ const Game = {
     setTimeout(() => {
       S.animating = false;
 
-      // Advanced: moved tile → age 4; all others decrement by 1
+      // Advanced: moved tile → fully visible; all others fade one step
       if (S.advanced) {
         const movedKey = tileKey(tile);
         S.tileEls.forEach((el, key) => {
-          const next = key === movedKey ? 4 : Math.max(0, (S.tileAge.get(key) ?? 0) - 1);
+          const next = key === movedKey ? SETTINGS.fadeSteps : Math.max(0, (S.tileAge.get(key) ?? 0) - 1);
           S.tileAge.set(key, next);
-          el.dataset.age = next;
+          _setAge(el, next);
         });
       }
 
@@ -738,10 +810,11 @@ window.addEventListener('resize', () => {
 // PWA SERVICE WORKER
 // ══════════════════════════════════════════════════════════════════════════
 
-const BUILD_TIME = '28 Mar 2026 19:07';
+const BUILD_TIME = '28 Mar 2026 19:35';
 const isPWA = window.matchMedia('(display-mode: standalone)').matches
            || window.navigator.standalone === true;
 document.getElementById('build-ts').textContent = `${isPWA ? 'PWA' : 'web'} · ${BUILD_TIME}`;
+document.getElementById('build-ts').addEventListener('click', () => Settings.open());
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
