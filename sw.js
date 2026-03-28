@@ -1,7 +1,8 @@
 // Bump this version string to push updates to installed users
-const CACHE = 'lanzarote-v1';
+const CACHE = 'lanzarote-v2';
 
 const ASSETS = [
+  './',              // caches /lanzarote-fever/ — the start_url navigation request
   './index.html',
   './manifest.json',
   './icons/icon-192.svg',
@@ -23,8 +24,26 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Cache-first: serve from cache, fall back to network
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
-  );
+  const url = new URL(e.request.url);
+  const isAvatar = url.pathname.includes('/avatars/');
+
+  if (isAvatar) {
+    // Network-first for avatars: fetch and cache on success, fall back to cache offline
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then(c => c.put(e.request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
+  } else {
+    // Cache-first for all other assets
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request))
+    );
+  }
 });
