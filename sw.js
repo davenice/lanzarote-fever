@@ -1,5 +1,5 @@
 // Bump this version string to push updates to installed users
-const CACHE = 'lanzarote-v2';
+const CACHE = 'lanzarote-v2.1';
 
 const ASSETS = [
   './',              // caches /lanzarote-fever/ — the start_url navigation request
