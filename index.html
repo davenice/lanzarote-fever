@@ -254,7 +254,7 @@
     }
     #build-ts {
       position: fixed; bottom: 6px; right: 8px;
-      font-size: 9px; color: rgba(255,255,255,.18);
+      font-size: 10px; color: rgba(255,255,255,.45);
       pointer-events: none; z-index: 999;
       font-family: monospace;
     }
@@ -486,14 +486,16 @@ const LevelGen = {
         const endRowMin   = nameInTop ? mid     : 0;
         const endRowMax   = nameInTop ? rows - 1: mid - 1;
 
-        const path = this.growPath(grid, cols, rows, cfg.stopProb, cfg.minPathLen, cfg.minEndDist, startRowMin, startRowMax);
-        if (!path) { ok = false; break; }
-
-        // Verify emoji endpoint landed in the opposite half
-        if (cfg.oppositeSides) {
-          const endRow = (path[path.length - 1] / cols) | 0;
-          if (endRow < endRowMin || endRow > endRowMax) { ok = false; break; }
+        // Retry this individual path up to 15 times to land in the correct zone
+        let path = null;
+        for (let pa = 0; pa < 15; pa++) {
+          const p = this.growPath(grid, cols, rows, cfg.stopProb, cfg.minPathLen, cfg.minEndDist, startRowMin, startRowMax);
+          if (!p) break; // no valid starts remain — give up immediately
+          if (!cfg.oppositeSides) { path = p; break; }
+          const endRow = (p[p.length - 1] / cols) | 0;
+          if (endRow >= endRowMin && endRow <= endRowMax) { path = p; break; }
         }
+        if (!path) { ok = false; break; }
 
         path.forEach(ci => { grid[ci] = pi; });
         endpoints.push(
@@ -806,8 +808,10 @@ window.addEventListener('resize', () => {
 // PWA SERVICE WORKER
 // ══════════════════════════════════════════════════════════════════════════
 
-const BUILD_TIME = '28 Mar 2026 09:38';
-document.getElementById('build-ts').textContent = BUILD_TIME;
+const BUILD_TIME = '28 Mar 2026 09:48';
+const isPWA = window.matchMedia('(display-mode: standalone)').matches
+           || window.navigator.standalone === true;
+document.getElementById('build-ts').textContent = `${isPWA ? 'PWA' : 'web'} · ${BUILD_TIME}`;
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
