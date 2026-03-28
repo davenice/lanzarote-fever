@@ -469,52 +469,88 @@ const LevelGen = {
     return path;
   },
 
+  // Backtracking DFS from startCi to endCi through empty cells.
+  // Guaranteed to find a path if one exists. Returns path array or null.
+  routePath(grid, startCi, endCi, cols, rows) {
+    const visited = new Uint8Array(grid.length);
+    const path = [];
+    const dfs = (ci) => {
+      if (ci === endCi) { path.push(ci); return true; }
+      if (visited[ci]) return false;
+      visited[ci] = 1;
+      path.push(ci);
+      const nbrs = this.shuffle(this.adj(ci, cols, rows))
+        .filter(n => (grid[n] === -1 || n === endCi) && !visited[n]);
+      for (const n of nbrs) { if (dfs(n)) return true; }
+      path.pop();
+      return false;
+    };
+    return dfs(startCi) ? path : null;
+  },
+
   // Generate a level; returns { family, endpoints }
   generate(difficulty, cols, rows) {
     const cfg = DIFFICULTY_CONFIG[difficulty];
+    const mid = Math.floor(rows / 2);
+    const allCells = [...Array(cols * rows).keys()];
+    console.log(`[LevelGen] generating ${difficulty} ${cols}×${rows} (${cfg.pairs} pairs)`);
 
     for (let attempt = 0; attempt < cfg.maxAttempts; attempt++) {
       const family = this.shuffle(FAMILY).slice(0, cfg.pairs);
       const grid = new Array(cols * rows).fill(-1);
-      const endpoints = [];
-      let ok = true;
+      const nameCells = [], emojiCells = [];
 
-      const mid = Math.floor(rows / 2);
-      for (let pi = 0; pi < cfg.pairs; pi++) {
-        // Randomly assign which half gets the name endpoint for this pair
-        const nameInTop   = !cfg.oppositeSides || (Math.random() < 0.5);
-        const startRowMin = nameInTop ? 0       : mid;
-        const startRowMax = nameInTop ? mid - 1 : rows - 1;
-        const endRowMin   = nameInTop ? mid     : 0;
-        const endRowMax   = nameInTop ? rows - 1: mid - 1;
-
-        // Retry this individual path up to 15 times to land in the correct zone
-        let path = null;
-        for (let pa = 0; pa < 15; pa++) {
-          const p = this.growPath(grid, cols, rows, cfg.stopProb, cfg.minPathLen, cfg.minEndDist, startRowMin, startRowMax);
-          if (!p) break; // no valid starts remain — give up immediately
-          if (!cfg.oppositeSides) { path = p; break; }
-          const endRow = (p[p.length - 1] / cols) | 0;
-          if (endRow >= endRowMin && endRow <= endRowMax) { path = p; break; }
+      // Phase 1 — place all endpoints first so routing knows all targets upfront
+      if (cfg.oppositeSides) {
+        const topPool    = this.shuffle(allCells.filter(i => (i / cols | 0) < mid));
+        const bottomPool = this.shuffle(allCells.filter(i => (i / cols | 0) >= mid));
+        if (topPool.length < cfg.pairs || bottomPool.length < cfg.pairs) continue;
+        for (let pi = 0; pi < cfg.pairs; pi++) {
+          nameCells.push(topPool[pi]);
+          emojiCells.push(bottomPool[pi]);
+          grid[topPool[pi]] = 99;    // temporary endpoint marker
+          grid[bottomPool[pi]] = 99;
         }
-        if (!path) { ok = false; break; }
-
-        path.forEach(ci => { grid[ci] = pi; });
-        endpoints.push(
-          { pairIndex: pi, kind: 'name',  cellIndex: path[0] },
-          { pairIndex: pi, kind: 'emoji', cellIndex: path[path.length - 1] }
-        );
+      } else {
+        const pool = this.shuffle(allCells);
+        for (let pi = 0; pi < cfg.pairs; pi++) {
+          nameCells.push(pool[pi * 2]);
+          emojiCells.push(pool[pi * 2 + 1]);
+          grid[pool[pi * 2]]     = 99;
+          grid[pool[pi * 2 + 1]] = 99;
+        }
       }
 
+      // Phase 2 — route each pair with backtracking DFS
+      let ok = true;
+      const endpoints = [];
+      for (let pi = 0; pi < cfg.pairs; pi++) {
+        grid[nameCells[pi]]  = -1;   // free endpoints so DFS can traverse them
+        grid[emojiCells[pi]] = -1;
+        const path = this.routePath(grid, nameCells[pi], emojiCells[pi], cols, rows);
+        if (!path || path.length < cfg.minPathLen) {
+          console.log(`[LevelGen] attempt ${attempt}: pair ${pi} failed (len=${path?.length ?? 0})`);
+          ok = false; break;
+        }
+        path.forEach(ci => { grid[ci] = pi; });
+        endpoints.push(
+          { pairIndex: pi, kind: 'name',  cellIndex: nameCells[pi]  },
+          { pairIndex: pi, kind: 'emoji', cellIndex: emojiCells[pi] }
+        );
+      }
       if (!ok) continue;
 
       const filled = grid.filter(v => v !== -1).length;
-      if (cfg.minFill > 0 && filled / (cols * rows) < cfg.minFill) continue;
+      if (cfg.minFill > 0 && filled / (cols * rows) < cfg.minFill) {
+        console.log(`[LevelGen] attempt ${attempt}: fill ${(filled/(cols*rows)*100).toFixed(0)}% < ${cfg.minFill*100}%`);
+        continue;
+      }
 
+      console.log(`[LevelGen] success on attempt ${attempt}, fill=${(filled/(cols*rows)*100).toFixed(0)}%`);
       return { family, endpoints };
     }
 
-    // Fallback: relax constraints
+    console.warn(`[LevelGen] ${difficulty} exhausted all attempts, falling back`);
     return this.generate(difficulty === 'hard' ? 'medium' : 'easy', cols, rows);
   },
 };
@@ -810,7 +846,7 @@ window.addEventListener('resize', () => {
 // PWA SERVICE WORKER
 // ══════════════════════════════════════════════════════════════════════════
 
-const BUILD_TIME = '28 Mar 2026 10:01';
+const BUILD_TIME = '28 Mar 2026 10:24';
 const isPWA = window.matchMedia('(display-mode: standalone)').matches
            || window.navigator.standalone === true;
 document.getElementById('build-ts').textContent = `${isPWA ? 'PWA' : 'web'} · ${BUILD_TIME}`;
