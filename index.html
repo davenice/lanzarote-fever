@@ -58,6 +58,7 @@
       filter: drop-shadow(0 2px 10px rgba(255,80,0,0.5));
     }
     .t-sub  { font-size: 13px; letter-spacing: 4px; text-transform: uppercase; color: #ff8040; opacity: .75; }
+    .t-instructions { font-size: 13px; line-height: 1.6; color: #cc7040; opacity: .85; max-width: 320px; text-align: center; padding: 0 8px; }
 
     /* ── Difficulty ──────────────────────────────────────────── */
     #sc-difficulty {
@@ -242,6 +243,7 @@
   <div class="t-vol">🌋</div>
   <h1 class="t-name">LANZAROTE<br>FEVER</h1>
   <p class="t-sub">Family Slide</p>
+  <p class="t-instructions">This is a sliding puzzle. There are pictures of family members and an emoji representing something they love. There are also some random holiday-themed emojis! Slide the tiles around to put each family member next to their loved emoji. When they are correct, they will glow. Get them all correct at the same time to win the round!</p>
   <button class="btn btn-p" onclick="UI.showScreen('difficulty')">Play</button>
 </div>
 
@@ -306,11 +308,11 @@ const FAMILY = [
   // Adults
   { id: 'jon',     name: 'Jon',     emoji: '🏃' },
   { id: 'joanna',  name: 'Joanna',  emoji: '🎨' },
-  { id: 'rachel',  name: 'Rachel',  emoji: '🎶' },
+  { id: 'rachel',  name: 'Rachel',  emoji: '🧁' },
   { id: 'dave',    name: 'Dave',    emoji: '🎸' },
   { id: 'granny',  name: 'Granny',  emoji: '🧵' },
   { id: 'grandpa', name: 'Grandpa', emoji: '📐' },
-  { id: 'jerry',   name: 'Jerry',   emoji: '⛷️' },
+  { id: 'jerry',   name: 'Jerry',   emoji: '🏰' },
   { id: 'paul',    name: 'Paul',    emoji: '🐶' },
 ];
 
@@ -666,7 +668,7 @@ window.addEventListener('resize', () => {
 // PWA SERVICE WORKER
 // ══════════════════════════════════════════════════════════════════════════
 
-const BUILD_TIME = '28 Mar 2026 13:33';
+const BUILD_TIME = '28 Mar 2026 15:01';
 const isPWA = window.matchMedia('(display-mode: standalone)').matches
            || window.navigator.standalone === true;
 document.getElementById('build-ts').textContent = `${isPWA ? 'PWA' : 'web'} · ${BUILD_TIME}`;
