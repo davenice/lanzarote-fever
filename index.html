@@ -480,7 +480,7 @@ const LevelGen = {
       visited[ci] = 1;
       path.push(ci);
       const nbrs = this.shuffle(this.adj(ci, cols, rows))
-        .filter(n => (grid[n] === -1 || grid[n] === 99 || n === endCi) && !visited[n]);
+        .filter(n => (grid[n] === -1 || n === endCi) && !visited[n]);
       for (const n of nbrs) { if (dfs(n)) return true; }
       path.pop();
       return false;
@@ -498,51 +498,34 @@ const LevelGen = {
     for (let attempt = 0; attempt < cfg.maxAttempts; attempt++) {
       const family = this.shuffle(FAMILY).slice(0, cfg.pairs);
       const grid = new Array(cols * rows).fill(-1);
-      const nameCells = [], emojiCells = [];
-
-      // Phase 1 — place all endpoints first so routing knows all targets upfront
-      if (cfg.oppositeSides) {
-        const topPool    = this.shuffle(allCells.filter(i => (i / cols | 0) < mid));
-        const bottomPool = this.shuffle(allCells.filter(i => (i / cols | 0) >= mid));
-        if (topPool.length < cfg.pairs || bottomPool.length < cfg.pairs) continue;
-        for (let pi = 0; pi < cfg.pairs; pi++) {
-          nameCells.push(topPool[pi]);
-          emojiCells.push(bottomPool[pi]);
-          grid[topPool[pi]] = 99;    // temporary endpoint marker
-          grid[bottomPool[pi]] = 99;
-        }
-      } else {
-        const pool = this.shuffle(allCells);
-        for (let pi = 0; pi < cfg.pairs; pi++) {
-          nameCells.push(pool[pi * 2]);
-          emojiCells.push(pool[pi * 2 + 1]);
-          grid[pool[pi * 2]]     = 99;
-          grid[pool[pi * 2 + 1]] = 99;
-        }
-      }
-
-      // Phase 2 — route each pair with backtracking DFS
-      let ok = true;
       const endpoints = [];
+      let ok = true;
+
+      // Route each pair: pick endpoints from currently-free cells, then DFS
       for (let pi = 0; pi < cfg.pairs; pi++) {
-        grid[nameCells[pi]]  = -1;   // free endpoints so DFS can traverse them
-        grid[emojiCells[pi]] = -1;
-        const path = this.routePath(grid, nameCells[pi], emojiCells[pi], cols, rows);
+        const free = allCells.filter(i => grid[i] === -1);
+        let nameCell, emojiCell;
+        if (cfg.oppositeSides) {
+          const freeTop    = this.shuffle(free.filter(i => (i / cols | 0) < mid));
+          const freeBottom = this.shuffle(free.filter(i => (i / cols | 0) >= mid));
+          if (!freeTop.length || !freeBottom.length) { ok = false; break; }
+          nameCell  = freeTop[0];
+          emojiCell = freeBottom[0];
+        } else {
+          const pool = this.shuffle(free);
+          if (pool.length < 2) { ok = false; break; }
+          nameCell  = pool[0];
+          emojiCell = pool[1];
+        }
+        const path = this.routePath(grid, nameCell, emojiCell, cols, rows);
         if (!path || path.length < cfg.minPathLen) {
           console.log(`[LevelGen] attempt ${attempt}: pair ${pi} failed (len=${path?.length ?? 0})`);
           ok = false; break;
         }
         path.forEach(ci => { grid[ci] = pi; });
-        // Reject if this path consumed a future pair's endpoint cell
-        const stomped = nameCells.slice(pi + 1).concat(emojiCells.slice(pi + 1))
-          .some(ci => grid[ci] === pi);
-        if (stomped) {
-          console.log(`[LevelGen] attempt ${attempt}: pair ${pi} stomped a future endpoint`);
-          ok = false; break;
-        }
         endpoints.push(
-          { pairIndex: pi, kind: 'name',  cellIndex: nameCells[pi]  },
-          { pairIndex: pi, kind: 'emoji', cellIndex: emojiCells[pi] }
+          { pairIndex: pi, kind: 'name',  cellIndex: nameCell  },
+          { pairIndex: pi, kind: 'emoji', cellIndex: emojiCell }
         );
       }
       if (!ok) continue;
@@ -853,7 +836,7 @@ window.addEventListener('resize', () => {
 // PWA SERVICE WORKER
 // ══════════════════════════════════════════════════════════════════════════
 
-const BUILD_TIME = '28 Mar 2026 10:36';
+const BUILD_TIME = '28 Mar 2026 11:34';
 const isPWA = window.matchMedia('(display-mode: standalone)').matches
            || window.navigator.standalone === true;
 document.getElementById('build-ts').textContent = `${isPWA ? 'PWA' : 'web'} · ${BUILD_TIME}`;
