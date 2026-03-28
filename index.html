@@ -115,115 +115,89 @@
       display: flex; align-items: center; justify-content: center;
       width: 100%; overflow: hidden;
     }
+
+    /* ── Sliding puzzle grid ─────────────────────────────────── */
     #grid {
-      display: grid;
-      grid-template-columns: repeat(var(--gc,5), var(--cs,48px));
-      grid-template-rows:    repeat(var(--gr,7), var(--cs,48px));
-      gap: 3px;
+      position: relative;
       touch-action: none;
       user-select: none; -webkit-user-select: none;
     }
 
-    /* ── Cells ───────────────────────────────────────────────── */
-    .cell {
-      background: #221008;
-      border: 1px solid #3a1a08;
-      border-radius: 6px;
-      position: relative;
+    /* Blank cell background (the "hole") */
+    #grid-bg {
+      position: absolute; inset: 0;
+      display: grid;
+      gap: 3px;
+    }
+    .blank-cell {
+      background: #110600;
+      border: 1px solid #2a1004;
+      border-radius: 8px;
+    }
+
+    /* Tiles */
+    .tile {
+      position: absolute;
+      border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: top 0.12s ease, left 0.12s ease;
+      border: 2px solid #4a2010;
+      background: #180a02;
+      box-sizing: border-box;
       overflow: hidden;
     }
-    /* Tile inner — shared */
-    .ti {
-      width: 86%; height: 86%;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 6px;
+    .tile:active { filter: brightness(1.15); }
+    .tile-name {
+      font-size: calc(var(--cs, 80px) * 0.22);
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+      line-height: 1.2;
+      padding: 4px;
+      word-break: break-word;
     }
-    /* Avatar image inside name tile */
-    .ti .av {
-      width: 100%; height: 100%;
+    .tile-name .av {
+      width: 86%; height: 86%;
       object-fit: cover;
       border-radius: 4px;
       display: block;
     }
-    /* Name tile */
-    .nt .ti {
-      background: #180a02;
-      border: 2px solid #4a2010;
-      font-weight: 700;
-      font-size: calc(var(--cs, 48px) * 0.21);
-      line-height: 1.15;
-      text-align: center;
-      color: #fff;
-      padding: 2px;
-      overflow: hidden;
-      word-break: break-word;
-    }
-    /* Emoji tile */
-    .et .ti {
-      font-size: calc(var(--cs, 48px) * 0.54);
+    .tile-emoji {
+      font-size: calc(var(--cs, 80px) * 0.52);
       line-height: 1;
     }
-
-    /* Drag path */
-    .cell.drag { background: #361500; box-shadow: inset 0 0 0 1px rgba(255,110,0,.35); }
-
-    /* Locked paths — pair colours (background must contrast clearly with #221008) */
-    .lk.p0 { background:#7a3000; box-shadow:inset 0 0 0 2px #ff6600, 0 0 5px rgba(255,102,0,.3); }
-    .lk.p1 { background:#7a0e00; box-shadow:inset 0 0 0 2px #ff3300, 0 0 5px rgba(255,51,0,.3);  }
-    .lk.p2 { background:#6a6000; box-shadow:inset 0 0 0 2px #ffdd00, 0 0 5px rgba(255,221,0,.3); }
-    .lk.p3 { background:#005a50; box-shadow:inset 0 0 0 2px #00ccaa, 0 0 5px rgba(0,204,170,.3); }
-    .lk.p4 { background:#4a1580; box-shadow:inset 0 0 0 2px #bb55ff, 0 0 5px rgba(187,85,255,.3);}
-    .lk.p5 { background:#3a6000; box-shadow:inset 0 0 0 2px #88ff00, 0 0 5px rgba(136,255,0,.3); }
-    .lk.p6 { background:#004a70; box-shadow:inset 0 0 0 2px #00aaff, 0 0 5px rgba(0,170,255,.3); }
-    .lk.p7 { background:#6a1545; box-shadow:inset 0 0 0 2px #ff44aa, 0 0 5px rgba(255,68,170,.3);}
-    .lk.p8 { background:#6a4000; box-shadow:inset 0 0 0 2px #ff9900, 0 0 5px rgba(255,153,0,.3); }
-    .lk.p9 { background:#005535; box-shadow:inset 0 0 0 2px #00ffaa, 0 0 5px rgba(0,255,170,.3); }
-
-    /* Locked endpoints glow stronger */
-    .lk.ep.p0 { box-shadow:inset 0 0 0 2px #ff6600, 0 0 12px rgba(255,102,0,.6); }
-    .lk.ep.p1 { box-shadow:inset 0 0 0 2px #ff3300, 0 0 12px rgba(255,51,0,.6);  }
-    .lk.ep.p2 { box-shadow:inset 0 0 0 2px #ffdd00, 0 0 12px rgba(255,221,0,.6); }
-    .lk.ep.p3 { box-shadow:inset 0 0 0 2px #00ccaa, 0 0 12px rgba(0,204,170,.6); }
-    .lk.ep.p4 { box-shadow:inset 0 0 0 2px #bb55ff, 0 0 12px rgba(187,85,255,.6);}
-    .lk.ep.p5 { box-shadow:inset 0 0 0 2px #88ff00, 0 0 12px rgba(136,255,0,.6); }
-    .lk.ep.p6 { box-shadow:inset 0 0 0 2px #00aaff, 0 0 12px rgba(0,170,255,.6); }
-    .lk.ep.p7 { box-shadow:inset 0 0 0 2px #ff44aa, 0 0 12px rgba(255,68,170,.6);}
-    .lk.ep.p8 { box-shadow:inset 0 0 0 2px #ff9900, 0 0 12px rgba(255,153,0,.6); }
-    .lk.ep.p9 { box-shadow:inset 0 0 0 2px #00ffaa, 0 0 12px rgba(0,255,170,.6); }
-
-    /* Locked endpoint tile-inner border matches colour */
-    .lk.nt.p0 .ti,.lk.et.p0 .ti { border-color:#ff6600; }
-    .lk.nt.p1 .ti,.lk.et.p1 .ti { border-color:#ff3300; }
-    .lk.nt.p2 .ti,.lk.et.p2 .ti { border-color:#ffdd00; }
-    .lk.nt.p3 .ti,.lk.et.p3 .ti { border-color:#00ccaa; }
-    .lk.nt.p4 .ti,.lk.et.p4 .ti { border-color:#bb55ff; }
-    .lk.nt.p5 .ti,.lk.et.p5 .ti { border-color:#88ff00; }
-    .lk.nt.p6 .ti,.lk.et.p6 .ti { border-color:#00aaff; }
-    .lk.nt.p7 .ti,.lk.et.p7 .ti { border-color:#ff44aa; }
-    .lk.nt.p8 .ti,.lk.et.p8 .ti { border-color:#ff9900; }
-    .lk.nt.p9 .ti,.lk.et.p9 .ti { border-color:#00ffaa; }
-
-    /* Easy mode colour hints */
-    #grid.hints .ep.p0 .ti { border-color:#ff660055; }
-    #grid.hints .ep.p1 .ti { border-color:#ff330055; }
-    #grid.hints .ep.p2 .ti { border-color:#ffdd0055; }
-    #grid.hints .ep.p3 .ti { border-color:#00ccaa55; }
-    #grid.hints .ep.p4 .ti { border-color:#bb55ff55; }
-    #grid.hints .ep.p5 .ti { border-color:#88ff0055; }
-    #grid.hints .ep.p6 .ti { border-color:#00aaff55; }
-    #grid.hints .ep.p7 .ti { border-color:#ff44aa55; }
-    #grid.hints .ep.p8 .ti { border-color:#ff990055; }
-    #grid.hints .ep.p9 .ti { border-color:#00ffaa55; }
-
-    /* Error flash */
-    @keyframes flash-err {
-      0%   { background:#221008; box-shadow:none; }
-      25%  { background:#5a0000; box-shadow:inset 0 0 0 2px #ff0000; }
-      80%  { background:#5a0000; box-shadow:inset 0 0 0 2px #ff0000; }
-      100% { background:#221008; box-shadow:none; }
+    .tile-wildcard {
+      font-size: calc(var(--cs, 80px) * 0.52);
+      line-height: 1;
+      opacity: 0.45;
     }
-    .cell.err { animation: flash-err .5s ease forwards; }
+
+    /* Pair colours as custom properties */
+    .p0 { --pc: #ff6600; } .p1 { --pc: #ff3300; }
+    .p2 { --pc: #ffdd00; } .p3 { --pc: #00ccaa; }
+    .p4 { --pc: #bb55ff; } .p5 { --pc: #88ff00; }
+    .p6 { --pc: #00aaff; } .p7 { --pc: #ff44aa; }
+    .p8 { --pc: #ff9900; } .p9 { --pc: #00ffaa; }
+
+    /* Easy colour hints — faint border shows pair */
+    #grid.hints .tile.p0,#grid.hints .tile.p1,#grid.hints .tile.p2,
+    #grid.hints .tile.p3,#grid.hints .tile.p4,#grid.hints .tile.p5,
+    #grid.hints .tile.p6,#grid.hints .tile.p7,#grid.hints .tile.p8,
+    #grid.hints .tile.p9 { border-color: var(--pc); opacity: 0.85; }
+
+    /* Matched pair — glow */
+    @keyframes pulse {
+      from { box-shadow: 0 0 6px 2px var(--pc); }
+      to   { box-shadow: 0 0 16px 6px var(--pc); }
+    }
+    .tile.matched {
+      border-color: var(--pc);
+      box-shadow: 0 0 10px 3px var(--pc);
+      animation: pulse 1.1s ease-in-out infinite alternate;
+      opacity: 1 !important;
+      z-index: 2;
+    }
 
     /* ── Win screen ──────────────────────────────────────────── */
     #sc-win {
@@ -266,7 +240,7 @@
 <div id="sc-title" class="screen active">
   <div class="t-vol">🌋</div>
   <h1 class="t-name">LANZAROTE<br>FEVER</h1>
-  <p class="t-sub">Family Connect</p>
+  <p class="t-sub">Family Slide</p>
   <button class="btn btn-p" onclick="UI.showScreen('difficulty')">Play</button>
 </div>
 
@@ -275,15 +249,15 @@
   <h2 class="sc-hd">Choose Difficulty</h2>
   <button class="diff-btn diff-e" onclick="Game.start('easy')">
     <span class="diff-n">Easy</span>
-    <span class="diff-d">5 pairs · colour hints · small grid</span>
+    <span class="diff-d">4 pairs · colour hints · 3×3 grid</span>
   </button>
   <button class="diff-btn diff-m" onclick="Game.start('medium')">
     <span class="diff-n">Medium</span>
-    <span class="diff-d">8 pairs · no hints · dense paths</span>
+    <span class="diff-d">6 pairs · no hints · 4×4 grid</span>
   </button>
   <button class="diff-btn diff-h" onclick="Game.start('hard')">
     <span class="diff-n">Hard</span>
-    <span class="diff-d">10 pairs · no hints · very dense paths</span>
+    <span class="diff-d">10 pairs · no hints · 5×5 grid</span>
   </button>
   <button class="btn btn-s" onclick="UI.showScreen('title')" style="margin-top:6px">← Back</button>
 </div>
@@ -292,11 +266,13 @@
 <div id="sc-game" class="screen">
   <div id="hud">
     <button id="hud-back" onclick="UI.showScreen('difficulty')">←</button>
-    <span id="hud-info">Easy · 0/3</span>
+    <span id="hud-info">Easy · 0/4</span>
     <button id="hud-undo" onclick="Game.undo()" disabled>↩</button>
   </div>
   <div id="grid-wrap">
-    <div id="grid"></div>
+    <div id="grid">
+      <div id="grid-bg"></div>
+    </div>
   </div>
 </div>
 
@@ -304,7 +280,7 @@
 <div id="sc-win" class="screen">
   <div class="win-ic">🎉</div>
   <h2 class="win-ttl">You got it!</h2>
-  <p class="win-sub" id="win-sub">All pairs connected!</p>
+  <p class="win-sub" id="win-sub">All pairs matched!</p>
   <button class="btn btn-p" onclick="Game.start(S.difficulty)">Next Puzzle</button>
   <button class="btn btn-s" onclick="UI.showScreen('difficulty')">Change Difficulty</button>
 </div>
@@ -315,7 +291,7 @@
 'use strict';
 
 // ══════════════════════════════════════════════════════════════════════════
-// FAMILY DATA — add more members here as { id, name, emoji }
+// FAMILY DATA
 // ══════════════════════════════════════════════════════════════════════════
 
 const FAMILY = [
@@ -337,8 +313,9 @@ const FAMILY = [
   { id: 'paul',    name: 'Paul',    emoji: '🐶' },
 ];
 
-// Preload avatar images — keyed by family member id.
-// Silent fail: if no file exists the name text is used instead.
+const WILDCARDS = ['🌋', '☀️', '🌊', '🏖️', '🦎', '🌴'];
+
+// Preload avatar images silently — used when available on name tiles
 const AVATARS = {};
 FAMILY.forEach(m => {
   const img = new Image();
@@ -346,17 +323,14 @@ FAMILY.forEach(m => {
   img.src = `avatars/${m.id}.png`;
 });
 
-// stopProb: probability a growing path stops at each step.
-// Lower = longer paths = denser grid = harder routing.
-// minFill: fraction of cells that must be covered by paths (0 = no requirement).
-// minPathLen: each individual path must be at least this many cells.
-// minEndDist: minimum Manhattan distance between a path's two endpoints.
-// oppositeSides: each pair's name and emoji endpoints must be in opposite halves
-// of the board (randomly assigned per pair), forcing cross-board paths.
+// ══════════════════════════════════════════════════════════════════════════
+// DIFFICULTY CONFIG
+// ══════════════════════════════════════════════════════════════════════════
+
 const DIFFICULTY_CONFIG = {
-  easy:   { pairs: 5,  pCols: 5, pRows: 6,  colourHints: true,  stopProb: 0.15, minFill: 0.80, minPathLen: 3, minEndDist: 2, maxAttempts: 300,  oppositeSides: false },
-  medium: { pairs: 8,  pCols: 6, pRows: 9,  colourHints: false, stopProb: 0.09, minFill: 0.80, minPathLen: 4, minEndDist: 3, maxAttempts: 500,  oppositeSides: true  },
-  hard:   { pairs: 10, pCols: 7, pRows: 12, colourHints: false, stopProb: 0.03, minFill: 0.90, minPathLen: 6, minEndDist: 5, maxAttempts: 1000, oppositeSides: true  },
+  easy:   { pairs: 4,  wildcards: 0, cols: 3, rows: 3, colourHints: true,  shuffleMoves: 30  },
+  medium: { pairs: 6,  wildcards: 3, cols: 4, rows: 4, colourHints: false, shuffleMoves: 80  },
+  hard:   { pairs: 10, wildcards: 4, cols: 5, rows: 5, colourHints: false, shuffleMoves: 150 },
 };
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -366,22 +340,23 @@ const DIFFICULTY_CONFIG = {
 const S = {
   screen: 'title',
   difficulty: 'easy',
-  cols: 5, rows: 7,
-  cellSize: 48,
-  family: [],       // FamilyMember[] for this level
-  endpoints: [],    // { pairIndex, kind:'name'|'emoji', cellIndex }[]
-  locked: [],       // boolean[] by pairIndex
-  paths: [],        // number[][] — locked paths
-  lockedGrid: [],   // flat number[] — pairIndex or -1
-  undoStack: [],    // pairIndex[] — order pairs were locked, most recent last
-  drag: null,       // { pairIndex, startKind, path, lastCell } | null
+  cols: 3, rows: 3,
+  cellSize: 80,
+  grid: [],        // flat array, length cols*rows; null = blank cell
+  blankIdx: 0,
+  pairs: 0,
+  matched: 0,
+  history: [],     // stack of previous blankIdx values (for undo)
+  animating: false,
+  colourHints: false,
+  tileEls: null,   // Map: tileKey → div element
 };
 
 // ══════════════════════════════════════════════════════════════════════════
-// LEVEL GENERATION
+// PUZZLE GENERATION
 // ══════════════════════════════════════════════════════════════════════════
 
-const LevelGen = {
+const PuzzleGen = {
 
   shuffle(a) {
     a = [...a];
@@ -392,7 +367,6 @@ const LevelGen = {
     return a;
   },
 
-  // Returns valid orthogonal neighbours of cellIdx
   adj(idx, cols, rows) {
     const r = (idx / cols) | 0, c = idx % cols, out = [];
     if (r > 0)        out.push(idx - cols);
@@ -402,186 +376,85 @@ const LevelGen = {
     return out;
   },
 
-  // Flood-fill count of empty cells reachable from startIdx
-  floodCount(grid, startIdx, cols, rows) {
-    if (grid[startIdx] !== -1) return 0;
-    const seen = new Uint8Array(grid.length);
-    seen[startIdx] = 1;
-    const q = [startIdx];
-    let n = 1;
-    while (q.length) {
-      for (const nb of this.adj(q.pop(), cols, rows)) {
-        if (!seen[nb] && grid[nb] === -1) { seen[nb] = 1; q.push(nb); n++; }
-      }
-    }
-    return n;
-  },
-
-  // Returns array of free cell indices reachable from startIdx via flood-fill
-  floodReach(grid, startIdx, cols, rows) {
-    if (grid[startIdx] !== -1) return [];
-    const seen = new Uint8Array(grid.length);
-    seen[startIdx] = 1;
-    const q = [startIdx];
-    const result = [startIdx];
-    while (q.length) {
-      for (const nb of this.adj(q.pop(), cols, rows)) {
-        if (!seen[nb] && grid[nb] === -1) { seen[nb] = 1; q.push(nb); result.push(nb); }
-      }
-    }
-    return result;
-  },
-
-  // Would marking cellIdx as used isolate any empty cells?
-  wouldIsolate(grid, cellIdx, cols, rows) {
-    grid[cellIdx] = 999;
-    let empties = 0, first = -1;
-    for (let i = 0; i < grid.length; i++) { if (grid[i] === -1) { empties++; if (first < 0) first = i; } }
-    const result = empties > 0 && this.floodCount(grid, first, cols, rows) < empties;
-    grid[cellIdx] = -1;
-    return result;
-  },
-
-  // Random walk through empty cells; returns path or null
-  growPath(grid, cols, rows, stopProb, minPathLen = 2, minEndDist = 0, startRowMin = 0, startRowMax = rows - 1) {
-    // Only start from cells that have enough reachable empty space for a valid path
-    const empty = [];
-    for (let i = 0; i < grid.length; i++) if (grid[i] === -1) empty.push(i);
-    if (empty.length < minPathLen) return null;
-
-    const valid = empty.filter(i => {
-      const row = (i / cols) | 0;
-      return row >= startRowMin && row <= startRowMax && this.floodCount(grid, i, cols, rows) >= minPathLen;
-    });
-    if (!valid.length) return null;
-    const start = valid[(Math.random() * valid.length) | 0];
-    const path = [start];
-    const seen = new Set([start]);
-
-    for (let step = 0; step < grid.length; step++) {
-      const cur = path[path.length - 1];
-      const nbrs = this.adj(cur, cols, rows).filter(n => grid[n] === -1 && !seen.has(n));
-      if (!nbrs.length) break;
-
-      // Prefer moves that don't isolate the remaining empty region
-      const shuffled = this.shuffle(nbrs);
-      const safe = shuffled.filter(n => !this.wouldIsolate(grid, n, cols, rows));
-      const next = (safe.length ? safe : shuffled)[0];
-
-      path.push(next);
-      seen.add(next);
-      if (path.length >= minPathLen && Math.random() < stopProb) break;
-    }
-
-    if (path.length < minPathLen) return null;
-
-    // Reject if endpoints are too close together (player could shortcut)
-    const end = path[path.length - 1];
-    const dist = Math.abs((start / cols | 0) - (end / cols | 0))
-               + Math.abs((start % cols)     - (end % cols));
-    if (dist < minEndDist) return null;
-
-    return path;
-  },
-
-  // Backtracking DFS from startCi to endCi through empty cells.
-  // Guaranteed to find a path if one exists. Returns path array or null.
-  // Prefers edge/wall cells over interior cells to leave the middle open for other pairs.
-  routePath(grid, startCi, endCi, cols, rows) {
-    const visited = new Uint8Array(grid.length);
-    const path = [];
-    const edgeScore = (ci) => {
-      const r = (ci / cols) | 0, c = ci % cols;
-      return (r === 0 || r === rows - 1 ? 1 : 0) + (c === 0 || c === cols - 1 ? 1 : 0);
-    };
-    const dfs = (ci) => {
-      if (ci === endCi) { path.push(ci); return true; }
-      if (visited[ci]) return false;
-      visited[ci] = 1;
-      path.push(ci);
-      // Shuffle first for randomness, then stable-sort to prefer edge cells
-      const nbrs = this.shuffle(this.adj(ci, cols, rows))
-        .filter(n => (grid[n] === -1 || n === endCi) && !visited[n])
-        .sort((a, b) => edgeScore(b) - edgeScore(a));
-      for (const n of nbrs) { if (dfs(n)) return true; }
-      path.pop();
-      return false;
-    };
-    return dfs(startCi) ? path : null;
-  },
-
-  // Generate a level; returns { family, endpoints }
-  generate(difficulty, cols, rows) {
+  build(difficulty) {
     const cfg = DIFFICULTY_CONFIG[difficulty];
-    const mid = Math.floor(rows / 2);
-    const allCells = [...Array(cols * rows).keys()];
-    console.log(`[LevelGen] generating ${difficulty} ${cols}×${rows} (${cfg.pairs} pairs)`);
+    const { cols, rows, pairs, wildcards } = cfg;
+    const N = cols * rows;
 
-    for (let attempt = 0; attempt < cfg.maxAttempts; attempt++) {
-      const family = this.shuffle(FAMILY).slice(0, cfg.pairs);
-      const grid = new Array(cols * rows).fill(-1);
-      const endpoints = [];
-      let ok = true;
+    // Pick random family members for this puzzle
+    const family = this.shuffle(FAMILY).slice(0, pairs);
 
-      // Route each pair: pick endpoints from currently-free cells, then DFS.
-      // emojiCell is chosen only from cells reachable from nameCell and at
-      // least cfg.minEndDist away (guarantees path length ≥ minPathLen).
-      for (let pi = 0; pi < cfg.pairs; pi++) {
-        const free = allCells.filter(i => grid[i] === -1);
-        const dist = (a, b) => Math.abs((a / cols | 0) - (b / cols | 0))
-                             + Math.abs((a % cols)     - (b % cols));
-        let nameCell, emojiCell, found = false;
-        if (cfg.oppositeSides) {
-          const freeTop = this.shuffle(free.filter(i => (i / cols | 0) < mid));
-          for (const nc of freeTop) {
-            const reachable = new Set(this.floodReach(grid, nc, cols, rows));
-            const cands = this.shuffle(
-              free.filter(i => (i / cols | 0) >= mid && reachable.has(i) && dist(nc, i) >= cfg.minEndDist)
-            );
-            if (cands.length) { nameCell = nc; emojiCell = cands[0]; found = true; break; }
-          }
-        } else {
-          const pool = this.shuffle(free);
-          for (let ni = 0; ni < pool.length; ni++) {
-            const nc = pool[ni];
-            const reachable = new Set(this.floodReach(grid, nc, cols, rows));
-            const cands = this.shuffle(
-              pool.filter((c, j) => j !== ni && reachable.has(c) && dist(nc, c) >= cfg.minEndDist)
-            );
-            if (cands.length) { nameCell = nc; emojiCell = cands[0]; found = true; break; }
-          }
-        }
-        if (!found) { ok = false; break; }
-        const path = this.routePath(grid, nameCell, emojiCell, cols, rows);
-        if (!path || path.length < cfg.minPathLen) {
-          console.log(`[LevelGen] attempt ${attempt}: pair ${pi} failed (len=${path?.length ?? 0})`);
-          ok = false; break;
-        }
-        path.forEach(ci => { grid[ci] = pi; });
-        endpoints.push(
-          { pairIndex: pi, kind: 'name',  cellIndex: nameCell  },
-          { pairIndex: pi, kind: 'emoji', cellIndex: emojiCell }
-        );
-      }
-      if (!ok) continue;
-
-      const filled = grid.filter(v => v !== -1).length;
-      if (cfg.minFill > 0 && filled / (cols * rows) < cfg.minFill) {
-        console.log(`[LevelGen] attempt ${attempt}: fill ${(filled/(cols*rows)*100).toFixed(0)}% < ${cfg.minFill*100}%`);
-        continue;
-      }
-
-      console.log(`[LevelGen] success on attempt ${attempt}, fill=${(filled/(cols*rows)*100).toFixed(0)}%`);
-      return { family, endpoints };
+    // Build solved state:
+    // Pairs placed as vertical neighbours: name in rows 0,2,4... emoji directly below
+    const grid = new Array(N).fill(null);
+    for (let pi = 0; pi < pairs; pi++) {
+      const col     = pi % cols;
+      const nameRow = Math.floor(pi / cols) * 2;
+      grid[nameRow * cols + col]       = { kind: 'name',  pairIndex: pi, member: family[pi] };
+      grid[(nameRow + 1) * cols + col] = { kind: 'emoji', pairIndex: pi, member: family[pi] };
     }
 
-    console.warn(`[LevelGen] ${difficulty} exhausted all attempts, falling back`);
-    return this.generate(difficulty === 'hard' ? 'medium' : 'easy', cols, rows);
+    // Fill remaining cells from the end: one blank, rest wildcards
+    const wEmojis = this.shuffle(WILDCARDS).slice(0, wildcards);
+    let wi = 0, blankIdx = -1;
+    for (let i = N - 1; i >= 0; i--) {
+      if (grid[i] !== null) continue;
+      if (blankIdx === -1) { blankIdx = i; continue; }
+      if (wi < wEmojis.length) grid[i] = { kind: 'wildcard', wIdx: wi, emoji: wEmojis[wi++] };
+    }
+
+    // Shuffle by making K random valid slides (guaranteed solvable)
+    blankIdx = this._shuffleGrid(grid, blankIdx, cols, rows, cfg.shuffleMoves);
+
+    // Safety: ensure not accidentally solved (re-shuffle if needed)
+    let safetyLimit = 20;
+    while (safetyLimit-- > 0 && this._checkSolved(grid, blankIdx, cols, pairs)) {
+      blankIdx = this._shuffleGrid(grid, blankIdx, cols, rows, 10);
+    }
+
+    return { family, grid, blankIdx };
+  },
+
+  _shuffleGrid(grid, blank, cols, rows, K) {
+    let prev = -1;
+    for (let i = 0; i < K; i++) {
+      const nbrs = this.adj(blank, cols, rows).filter(n => n !== prev);
+      const next = nbrs[Math.floor(Math.random() * nbrs.length)];
+      [grid[blank], grid[next]] = [grid[next], grid[blank]];
+      prev = blank;
+      blank = next;
+    }
+    return blank;
+  },
+
+  _checkSolved(grid, blankIdx, cols, pairs) {
+    for (let pi = 0; pi < pairs; pi++) {
+      const ni = grid.findIndex(t => t?.kind === 'name'  && t.pairIndex === pi);
+      const ei = grid.findIndex(t => t?.kind === 'emoji' && t.pairIndex === pi);
+      if (!_isAdjacent(ni, ei, cols)) return false;
+    }
+    return true;
   },
 };
 
 // ══════════════════════════════════════════════════════════════════════════
-// UI / RENDERER
+// HELPERS
+// ══════════════════════════════════════════════════════════════════════════
+
+function _isAdjacent(a, b, cols) {
+  if (a < 0 || b < 0) return false;
+  const ac = a % cols, ar = (a / cols) | 0;
+  const bc = b % cols, br = (b / cols) | 0;
+  return (ac === bc && Math.abs(ar - br) === 1) || (ar === br && Math.abs(ac - bc) === 1);
+}
+
+function tileKey(tile) {
+  if (!tile) return null;
+  return tile.kind === 'wildcard' ? 'wild-' + tile.wIdx : tile.kind + '-' + tile.pairIndex;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// UI
 // ══════════════════════════════════════════════════════════════════════════
 
 const UI = {
@@ -591,81 +464,96 @@ const UI = {
     S.screen = name;
   },
 
-  // Direct child access — O(1), no querySelector needed
-  cell(i) { return document.getElementById('grid').children[i]; },
-
   buildGrid() {
-    const g = document.getElementById('grid');
-    g.innerHTML = '';
-    const root = document.documentElement;
-    root.style.setProperty('--cs', S.cellSize + 'px');
-    root.style.setProperty('--gc', S.cols);
-    root.style.setProperty('--gr', S.rows);
-    g.classList.toggle('hints', DIFFICULTY_CONFIG[S.difficulty].colourHints);
+    const gridEl = document.getElementById('grid');
+    const bgEl   = document.getElementById('grid-bg');
+
+    // Size the grid container
+    const gap  = 3;
+    const cs   = S.cellSize;
+    const w    = S.cols * cs + (S.cols - 1) * gap;
+    const h    = S.rows * cs + (S.rows - 1) * gap;
+    gridEl.style.width  = w + 'px';
+    gridEl.style.height = h + 'px';
+    gridEl.style.setProperty('--cs', cs + 'px');
+    gridEl.classList.toggle('hints', S.colourHints);
+
+    // Background grid (blank cells)
+    bgEl.style.gridTemplateColumns = `repeat(${S.cols}, ${cs}px)`;
+    bgEl.style.gridTemplateRows    = `repeat(${S.rows}, ${cs}px)`;
+    bgEl.innerHTML = '';
     for (let i = 0; i < S.cols * S.rows; i++) {
       const d = document.createElement('div');
-      d.className = 'cell';
-      g.appendChild(d);
+      d.className = 'blank-cell';
+      bgEl.appendChild(d);
     }
-    this._placeEndpoints();
+
+    // Tile elements — one per non-blank tile, absolutely positioned
+    // Remove old tiles (not the bg div)
+    gridEl.querySelectorAll('.tile').forEach(el => el.remove());
+    S.tileEls = new Map();
+
+    S.grid.forEach((tile, idx) => {
+      if (!tile) return;
+      const div = document.createElement('div');
+      div.className = 'tile tile-' + tile.kind;
+      if (tile.kind !== 'wildcard') div.classList.add('p' + tile.pairIndex);
+
+      // Content
+      if (tile.kind === 'name') {
+        if (AVATARS[tile.member.id]) {
+          const img = document.createElement('img');
+          img.src = AVATARS[tile.member.id].src;
+          img.alt = tile.member.name;
+          img.className = 'av';
+          div.appendChild(img);
+        } else {
+          div.textContent = tile.member.name;
+        }
+      } else if (tile.kind === 'emoji') {
+        div.textContent = tile.member.emoji;
+      } else {
+        div.textContent = tile.emoji;
+      }
+
+      div.style.width  = cs + 'px';
+      div.style.height = cs + 'px';
+      this._positionTile(div, idx);
+      gridEl.appendChild(div);
+      S.tileEls.set(tileKey(tile), div);
+    });
   },
 
-  _placeEndpoints() {
-    for (const ep of S.endpoints) {
-      const c = this.cell(ep.cellIndex);
-      const isName = ep.kind === 'name';
-      c.className = `cell ep ${isName ? 'nt' : 'et'} p${ep.pairIndex}`;
-      const member = S.family[ep.pairIndex];
-      const inner = document.createElement('div');
-      inner.className = 'ti';
-      if (isName && AVATARS[member.id]) {
-        const img = document.createElement('img');
-        img.src = AVATARS[member.id].src;
-        img.alt = member.name;
-        img.className = 'av';
-        inner.appendChild(img);
-      } else {
-        inner.textContent = isName ? member.name : member.emoji;
-      }
-      c.appendChild(inner);
-    }
+  _positionTile(div, idx) {
+    const gap = 3, cs = S.cellSize;
+    const col = idx % S.cols, row = (idx / S.cols) | 0;
+    div.dataset.idx = idx;
+    div.style.left = col * (cs + gap) + 'px';
+    div.style.top  = row * (cs + gap) + 'px';
   },
 
   updateHUD() {
-    const solved = S.locked.filter(Boolean).length;
     const diff = S.difficulty[0].toUpperCase() + S.difficulty.slice(1);
-    document.getElementById('hud-info').textContent = `${diff} · ${solved}/${S.family.length}`;
-    document.getElementById('hud-undo').disabled = S.undoStack.length === 0;
+    document.getElementById('hud-info').textContent = `${diff} · ${S.matched}/${S.pairs}`;
+    document.getElementById('hud-undo').disabled = S.history.length === 0;
   },
 
-  // Apply locked styling to all cells in a path
-  lockPath(pi) {
-    for (const ci of S.paths[pi]) {
-      const c = this.cell(ci);
-      if (!c) continue;
-      c.classList.remove('drag', 'err');
-      c.classList.add('lk', `p${pi}`);
+  updateMatchHighlights() {
+    S.matched = 0;
+    S.tileEls.forEach(div => div.classList.remove('matched'));
+    for (let pi = 0; pi < S.pairs; pi++) {
+      const ni = S.grid.findIndex(t => t?.kind === 'name'  && t.pairIndex === pi);
+      const ei = S.grid.findIndex(t => t?.kind === 'emoji' && t.pairIndex === pi);
+      if (_isAdjacent(ni, ei, S.cols)) {
+        S.matched++;
+        S.tileEls.get('name-'  + pi)?.classList.add('matched');
+        S.tileEls.get('emoji-' + pi)?.classList.add('matched');
+      }
     }
+    this.updateHUD();
   },
 
-  // Add or remove drag-highlight from a list of cell indices
-  setDrag(path, on) {
-    for (const ci of path) {
-      const c = this.cell(ci);
-      if (c && !c.classList.contains('lk')) c.classList.toggle('drag', on);
-    }
-  },
-
-  flashError(path) {
-    for (const ci of path) {
-      const c = this.cell(ci);
-      if (!c) continue;
-      c.classList.remove('drag');
-      void c.offsetWidth;           // restart animation
-      c.classList.add('err');
-      c.addEventListener('animationend', () => c.classList.remove('err'), { once: true });
-    }
-  },
+  positionTile(div, idx) { this._positionTile(div, idx); },
 };
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -680,180 +568,80 @@ const Game = {
     const h = window.innerHeight - hud - pad;
     const byW = Math.floor((w - (cols - 1) * gap) / cols);
     const byH = Math.floor((h - (rows - 1) * gap) / rows);
-    return Math.max(32, Math.min(byW, byH));
+    return Math.max(40, Math.min(byW, byH));
   },
 
   start(difficulty) {
     const cfg = DIFFICULTY_CONFIG[difficulty];
-    S.difficulty = difficulty;
-    const portrait = window.innerHeight >= window.innerWidth;
-    S.cols = portrait ? cfg.pCols : cfg.pRows;
-    S.rows = portrait ? cfg.pRows : cfg.pCols;
-    S.cellSize = this._cellSize(S.cols, S.rows);
+    S.difficulty    = difficulty;
+    S.cols          = cfg.cols;
+    S.rows          = cfg.rows;
+    S.pairs         = cfg.pairs;
+    S.colourHints   = cfg.colourHints;
+    S.cellSize      = this._cellSize(cfg.cols, cfg.rows);
+    S.history       = [];
+    S.matched       = 0;
+    S.animating     = false;
 
-    const lvl = LevelGen.generate(difficulty, S.cols, S.rows);
-    S.family     = lvl.family;
-    S.endpoints  = lvl.endpoints;
-    S.locked     = new Array(lvl.family.length).fill(false);
-    S.paths      = new Array(lvl.family.length).fill(null);
-    S.lockedGrid = new Array(S.cols * S.rows).fill(-1);
-    S.undoStack  = [];
-    S.drag       = null;
+    const puzzle    = PuzzleGen.build(difficulty);
+    S.grid          = puzzle.grid;
+    S.blankIdx      = puzzle.blankIdx;
 
     UI.showScreen('game');
     UI.buildGrid();
-    UI.updateHUD();
-    Input.attach();
+    UI.updateMatchHighlights();
+    this._attachInput();
   },
 
-  dragStart(ci) {
-    const ep = S.endpoints.find(e => e.cellIndex === ci);
-    if (!ep || S.locked[ep.pairIndex]) return;
-    if (S.drag) UI.setDrag(S.drag.path, false);
-    S.drag = { pairIndex: ep.pairIndex, startKind: ep.kind, path: [ci], lastCell: ci };
-    UI.setDrag(S.drag.path, true);
-  },
+  _slideToBlank(tileIdx, isUndo) {
+    if (S.animating) return;
+    S.animating = true;
+    if (!isUndo) S.history.push(S.blankIdx);
 
-  dragMove(ci) {
-    if (!S.drag || ci === S.drag.lastCell) return;
-    const { path, pairIndex } = S.drag;
-    const last = path[path.length - 1];
+    const tile       = S.grid[tileIdx];
+    const div        = S.tileEls.get(tileKey(tile));
+    const destIdx    = S.blankIdx;  // tile moves to the current blank position
 
-    // Must be orthogonally adjacent to the current path end
-    if (!LevelGen.adj(last, S.cols, S.rows).includes(ci)) return;
+    S.grid[destIdx] = tile;
+    S.grid[tileIdx] = null;
+    S.blankIdx      = tileIdx;
 
-    // Backtrack if revisiting a cell in our own path
-    const pos = path.indexOf(ci);
-    if (pos !== -1) {
-      const removed = path.splice(pos + 1);
-      UI.setDrag(removed, false);
-      S.drag.lastCell = ci;
-      return;
-    }
+    UI.positionTile(div, destIdx); // CSS transition animates top/left
 
-    // Stop extending once we've reached our own target endpoint
-    const atTarget = S.endpoints.find(
-      e => e.cellIndex === last && e.pairIndex === pairIndex && e.kind !== S.drag.startKind
-    );
-    if (atTarget) return;
-
-    // Blocked: cell is part of a completed (locked) path
-    if (S.lockedGrid[ci] !== -1) return;
-
-    // Blocked: cell is an endpoint belonging to a different pair
-    if (S.endpoints.some(e => e.cellIndex === ci && e.pairIndex !== pairIndex)) return;
-
-    path.push(ci);
-    S.drag.lastCell = ci;
-    const c = UI.cell(ci);
-    if (c && !c.classList.contains('lk')) c.classList.add('drag');
-  },
-
-  dragEnd() {
-    if (!S.drag) return;
-    const { pairIndex, startKind, path } = S.drag;
-    UI.setDrag(path, false);
-    S.drag = null;
-
-    if (path.length < 2) return;
-
-    const lastCi = path[path.length - 1];
-    const ep = S.endpoints.find(e => e.cellIndex === lastCi);
-    const expectedKind = startKind === 'name' ? 'emoji' : 'name';
-
-    if (ep && ep.pairIndex === pairIndex && ep.kind === expectedKind) {
-      // Correct match — lock the path
-      S.locked[pairIndex] = true;
-      S.paths[pairIndex] = path;
-      path.forEach(ci => { S.lockedGrid[ci] = pairIndex; });
-      S.undoStack.push(pairIndex);
-      UI.lockPath(pairIndex);
-      UI.updateHUD();
-      this._checkWin();
-    } else if (ep) {
-      // Wrong endpoint — flash red
-      UI.flashError(path);
-    }
-    // Released on empty cell — silent clear (already done above)
-  },
-
-  _checkWin() {
-    const cfg = DIFFICULTY_CONFIG[S.difficulty];
-    if (!S.locked.every(Boolean)) return;
     setTimeout(() => {
-      document.getElementById('win-sub').textContent =
-        `All ${S.family.length} pairs connected!`;
-      UI.showScreen('win');
-    }, 350);
+      S.animating = false;
+      UI.updateMatchHighlights();
+      if (S.matched === S.pairs) {
+        setTimeout(() => {
+          document.getElementById('win-sub').textContent =
+            `All ${S.pairs} pairs matched!`;
+          UI.showScreen('win');
+        }, 350);
+      }
+    }, 130);
   },
 
   undo() {
-    if (!S.undoStack.length) return;
-    const pi = S.undoStack.pop();
-    const path = S.paths[pi];
-    if (!path) return;
-
-    // Restore grid state
-    path.forEach(ci => { S.lockedGrid[ci] = -1; });
-    S.locked[pi] = false;
-    S.paths[pi] = null;
-
-    // Restore cell visuals
-    for (const ci of path) {
-      const c = UI.cell(ci);
-      if (!c) continue;
-      c.classList.remove('lk');
-      // Non-endpoint cells also lose their pair colour
-      if (!c.classList.contains('ep')) c.classList.remove(`p${pi}`);
-    }
-
-    UI.updateHUD();
-  },
-};
-
-// ══════════════════════════════════════════════════════════════════════════
-// INPUT HANDLER
-// ══════════════════════════════════════════════════════════════════════════
-
-const Input = {
-  _g: null, _lx: 0, _ly: 0,
-
-  attach() {
-    const g = document.getElementById('grid');
-    if (this._g) this._detach(this._g);
-    this._g = g;
-    // Bind once; reuse across re-attaches
-    if (!this._bound) {
-      this._bound = {
-        pd: e => { e.preventDefault(); this._lx = e.clientX; this._ly = e.clientY; const ci = this._ci(e.clientX, e.clientY); if (ci >= 0) Game.dragStart(ci); },
-        pm: e => { e.preventDefault(); if (!S.drag) return; const dx = e.clientX - this._lx, dy = e.clientY - this._ly; if (dx*dx + dy*dy < (S.cellSize * 0.28)**2) return; this._lx = e.clientX; this._ly = e.clientY; const ci = this._ci(e.clientX, e.clientY); if (ci >= 0) Game.dragMove(ci); },
-        pu: ()  => Game.dragEnd(),
-        pc: ()  => { if (S.drag) { UI.setDrag(S.drag.path, false); S.drag = null; } },
-      };
-    }
-    g.addEventListener('pointerdown',   this._bound.pd);
-    g.addEventListener('pointermove',   this._bound.pm, { passive: false });
-    g.addEventListener('pointerup',     this._bound.pu);
-    g.addEventListener('pointercancel', this._bound.pc);
+    if (!S.history.length || S.animating) return;
+    const prevBlank = S.history.pop();
+    // The tile currently at prevBlank moved there on the last slide;
+    // sliding it back to S.blankIdx reverses that move
+    this._slideToBlank(prevBlank, true);
   },
 
-  _detach(g) {
-    if (!this._bound) return;
-    g.removeEventListener('pointerdown',   this._bound.pd);
-    g.removeEventListener('pointermove',   this._bound.pm);
-    g.removeEventListener('pointerup',     this._bound.pu);
-    g.removeEventListener('pointercancel', this._bound.pc);
-  },
-
-  // Coordinate → cell index using grid bounding rect
-  _ci(x, y) {
-    if (!this._g) return -1;
-    const r = this._g.getBoundingClientRect();
-    const step = S.cellSize + 3;   // cellSize + gap (3px)
-    const col = ((x - r.left) / step) | 0;
-    const row = ((y - r.top)  / step) | 0;
-    if (col < 0 || col >= S.cols || row < 0 || row >= S.rows) return -1;
-    return row * S.cols + col;
+  _attachInput() {
+    const gridEl = document.getElementById('grid');
+    if (this._inputHandler) gridEl.removeEventListener('pointerdown', this._inputHandler);
+    this._inputHandler = (e) => {
+      if (S.animating) return;
+      const div = e.target.closest('[data-idx]');
+      if (!div) return;
+      const tileIdx = parseInt(div.dataset.idx);
+      if (_isAdjacent(tileIdx, S.blankIdx, S.cols)) {
+        this._slideToBlank(tileIdx, false);
+      }
+    };
+    gridEl.addEventListener('pointerdown', this._inputHandler);
   },
 };
 
@@ -871,7 +659,7 @@ window.addEventListener('resize', () => {
 // PWA SERVICE WORKER
 // ══════════════════════════════════════════════════════════════════════════
 
-const BUILD_TIME = '28 Mar 2026 11:48';
+const BUILD_TIME = '28 Mar 2026 13:26';
 const isPWA = window.matchMedia('(display-mode: standalone)').matches
            || window.navigator.standalone === true;
 document.getElementById('build-ts').textContent = `${isPWA ? 'PWA' : 'web'} · ${BUILD_TIME}`;
