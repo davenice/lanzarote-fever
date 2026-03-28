@@ -252,6 +252,12 @@
       background: #221008; border: 2px solid #4a2010;
       color: #ff8844;
     }
+    #build-ts {
+      position: fixed; bottom: 6px; right: 8px;
+      font-size: 9px; color: rgba(255,255,255,.18);
+      pointer-events: none; z-index: 999;
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
@@ -343,10 +349,12 @@ FAMILY.forEach(m => {
 // minFill: fraction of cells that must be covered by paths (0 = no requirement).
 // minPathLen: each individual path must be at least this many cells.
 // minEndDist: minimum Manhattan distance between a path's two endpoints.
+// oppositeSides: each pair's name and emoji endpoints must be in opposite halves
+// of the board (randomly assigned per pair), forcing cross-board paths.
 const DIFFICULTY_CONFIG = {
-  easy:   { pairs: 5,  pCols: 5, pRows: 6,  colourHints: true,  stopProb: 0.15, minFill: 0.80, minPathLen: 3, minEndDist: 2, maxAttempts: 300  },
-  medium: { pairs: 8,  pCols: 6, pRows: 9,  colourHints: false, stopProb: 0.09, minFill: 0.80, minPathLen: 4, minEndDist: 3, maxAttempts: 500  },
-  hard:   { pairs: 10, pCols: 7, pRows: 12, colourHints: false, stopProb: 0.03, minFill: 0.90, minPathLen: 6, minEndDist: 5, maxAttempts: 1000 },
+  easy:   { pairs: 5,  pCols: 5, pRows: 6,  colourHints: true,  stopProb: 0.15, minFill: 0.80, minPathLen: 3, minEndDist: 2, maxAttempts: 300,  oppositeSides: false },
+  medium: { pairs: 8,  pCols: 6, pRows: 9,  colourHints: false, stopProb: 0.09, minFill: 0.80, minPathLen: 4, minEndDist: 3, maxAttempts: 500,  oppositeSides: true  },
+  hard:   { pairs: 10, pCols: 7, pRows: 12, colourHints: false, stopProb: 0.03, minFill: 0.90, minPathLen: 6, minEndDist: 5, maxAttempts: 1000, oppositeSides: true  },
 };
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -418,13 +426,16 @@ const LevelGen = {
   },
 
   // Random walk through empty cells; returns path or null
-  growPath(grid, cols, rows, stopProb, minPathLen = 2, minEndDist = 0) {
+  growPath(grid, cols, rows, stopProb, minPathLen = 2, minEndDist = 0, startRowMin = 0, startRowMax = rows - 1) {
     // Only start from cells that have enough reachable empty space for a valid path
     const empty = [];
     for (let i = 0; i < grid.length; i++) if (grid[i] === -1) empty.push(i);
     if (empty.length < minPathLen) return null;
 
-    const valid = empty.filter(i => this.floodCount(grid, i, cols, rows) >= minPathLen);
+    const valid = empty.filter(i => {
+      const row = (i / cols) | 0;
+      return row >= startRowMin && row <= startRowMax && this.floodCount(grid, i, cols, rows) >= minPathLen;
+    });
     if (!valid.length) return null;
     const start = valid[(Math.random() * valid.length) | 0];
     const path = [start];
@@ -466,9 +477,24 @@ const LevelGen = {
       const endpoints = [];
       let ok = true;
 
+      const mid = Math.floor(rows / 2);
       for (let pi = 0; pi < cfg.pairs; pi++) {
-        const path = this.growPath(grid, cols, rows, cfg.stopProb, cfg.minPathLen, cfg.minEndDist);
+        // Randomly assign which half gets the name endpoint for this pair
+        const nameInTop   = !cfg.oppositeSides || (Math.random() < 0.5);
+        const startRowMin = nameInTop ? 0       : mid;
+        const startRowMax = nameInTop ? mid - 1 : rows - 1;
+        const endRowMin   = nameInTop ? mid     : 0;
+        const endRowMax   = nameInTop ? rows - 1: mid - 1;
+
+        const path = this.growPath(grid, cols, rows, cfg.stopProb, cfg.minPathLen, cfg.minEndDist, startRowMin, startRowMax);
         if (!path) { ok = false; break; }
+
+        // Verify emoji endpoint landed in the opposite half
+        if (cfg.oppositeSides) {
+          const endRow = (path[path.length - 1] / cols) | 0;
+          if (endRow < endRowMin || endRow > endRowMax) { ok = false; break; }
+        }
+
         path.forEach(ci => { grid[ci] = pi; });
         endpoints.push(
           { pairIndex: pi, kind: 'name',  cellIndex: path[0] },
@@ -780,9 +806,13 @@ window.addEventListener('resize', () => {
 // PWA SERVICE WORKER
 // ══════════════════════════════════════════════════════════════════════════
 
+const BUILD_TIME = '28 Mar 2026 09:38';
+document.getElementById('build-ts').textContent = BUILD_TIME;
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 </script>
+<div id="build-ts"></div>
 </body>
 </html>
