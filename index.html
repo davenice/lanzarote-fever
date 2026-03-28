@@ -114,6 +114,7 @@
       flex: 1 1 auto;
       display: flex; align-items: center; justify-content: center;
       width: 100%; overflow: hidden;
+      padding: 12px;
     }
 
     /* ── Sliding puzzle grid ─────────────────────────────────── */
@@ -296,7 +297,7 @@
 
 const FAMILY = [
   // Children
-  { id: 'emily',   name: 'Emily',   emoji: '🎵' },
+  { id: 'emily',   name: 'Emily',   emoji: '🎻' },
   { id: 'amy',     name: 'Amy',     emoji: '🤸' },
   { id: 'bethany', name: 'Bethany', emoji: '🐭' },
   { id: 'micah',   name: 'Micah',   emoji: '🏏' },
@@ -305,7 +306,7 @@ const FAMILY = [
   // Adults
   { id: 'jon',     name: 'Jon',     emoji: '🏃' },
   { id: 'joanna',  name: 'Joanna',  emoji: '🎨' },
-  { id: 'rachel',  name: 'Rachel',  emoji: '🎺' },
+  { id: 'rachel',  name: 'Rachel',  emoji: '🎶' },
   { id: 'dave',    name: 'Dave',    emoji: '🎸' },
   { id: 'granny',  name: 'Granny',  emoji: '🧵' },
   { id: 'grandpa', name: 'Grandpa', emoji: '📐' },
@@ -384,14 +385,20 @@ const PuzzleGen = {
     // Pick random family members for this puzzle
     const family = this.shuffle(FAMILY).slice(0, pairs);
 
-    // Build solved state:
-    // Pairs placed as vertical neighbours: name in rows 0,2,4... emoji directly below
+    // Build solved state: names in rows 0,2,4..., emojis directly below (vertical adjacency).
+    // If the emoji cell would be out of bounds (e.g. last pair in Easy 3×3), place horizontally.
     const grid = new Array(N).fill(null);
     for (let pi = 0; pi < pairs; pi++) {
-      const col     = pi % cols;
-      const nameRow = Math.floor(pi / cols) * 2;
-      grid[nameRow * cols + col]       = { kind: 'name',  pairIndex: pi, member: family[pi] };
-      grid[(nameRow + 1) * cols + col] = { kind: 'emoji', pairIndex: pi, member: family[pi] };
+      const col      = pi % cols;
+      const nameRow  = Math.floor(pi / cols) * 2;
+      const nameIdx  = nameRow * cols + col;
+      const emojiIdx = (nameRow + 1) * cols + col;
+      grid[nameIdx] = { kind: 'name', pairIndex: pi, member: family[pi] };
+      if (emojiIdx < N) {
+        grid[emojiIdx] = { kind: 'emoji', pairIndex: pi, member: family[pi] };
+      } else {
+        grid[nameIdx + 1] = { kind: 'emoji', pairIndex: pi, member: family[pi] };
+      }
     }
 
     // Fill remaining cells from the end: one blank, rest wildcards
@@ -563,7 +570,7 @@ const UI = {
 const Game = {
 
   _cellSize(cols, rows) {
-    const hud = 56, pad = 8, gap = 3;
+    const hud = 56, pad = 8 + 24, gap = 3;  // 24 = 2 × 12px grid-wrap padding
     const w = window.innerWidth  - pad;
     const h = window.innerHeight - hud - pad;
     const byW = Math.floor((w - (cols - 1) * gap) / cols);
@@ -659,7 +666,7 @@ window.addEventListener('resize', () => {
 // PWA SERVICE WORKER
 // ══════════════════════════════════════════════════════════════════════════
 
-const BUILD_TIME = '28 Mar 2026 13:26';
+const BUILD_TIME = '28 Mar 2026 13:33';
 const isPWA = window.matchMedia('(display-mode: standalone)').matches
            || window.navigator.standalone === true;
 document.getElementById('build-ts').textContent = `${isPWA ? 'PWA' : 'web'} · ${BUILD_TIME}`;
