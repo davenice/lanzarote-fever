@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Lanzarote Fever** is a mobile-only browser-based puzzle game delivered as a Progressive Web App (PWA). It is a family-personalised flow/connect puzzle — players drag lava-flow paths between family member name tiles and their matching interest emoji tiles. The puzzle is the routing: paths must not cross, and on harder difficulties the board is densely packed so finding valid routes is genuinely challenging.
+**Lanzarote Fever** is a mobile-only browser-based puzzle game delivered as a Progressive Web App (PWA). It is a sliding tile puzzle — the player slides tiles around a grid to place each family member's name/photo tile adjacent to the emoji that represents something they love. The puzzle is the memory and logic challenge of knowing who loves what, plus the spatial challenge of routing tiles without blocking each other.
 
 Suitable for ages 5 and up.
 
@@ -10,12 +10,12 @@ Suitable for ages 5 and up.
 
 ## Family Members
 
-14 family members split into children and adults. Each has a unique `id` used to load their avatar image.
+14 family members. Each has a unique `id` used to load their avatar image.
 
 ### Children
 | Name | Emoji | Interest | Avatar file |
 |------|-------|----------|-------------|
-| Emily | 🎵 | Music | avatars/emily.png |
+| Emily | 🎻 | Violin | avatars/emily.png |
 | Amy | 🤸 | Gymnastics | avatars/amy.png |
 | Bethany | 🐭 | Mouse toys | avatars/bethany.png |
 | Micah | 🏏 | Cricket | avatars/micah.png |
@@ -27,11 +27,11 @@ Suitable for ages 5 and up.
 |------|-------|----------|-------------|
 | Jon | 🏃 | Running | avatars/jon.png |
 | Joanna | 🎨 | Drawing | avatars/joanna.png |
-| Rachel | 🎺 | Clarinet / Teaching | avatars/rachel.png |
+| Rachel | 🧁 | Baking | avatars/rachel.png |
 | Dave | 🎸 | Guitar | avatars/dave.png |
 | Granny | 🧵 | Sewing | avatars/granny.png |
 | Grandpa | 📐 | Maths | avatars/grandpa.png |
-| Jerry | ⛷️ | Skiing | avatars/jerry.png |
+| Jerry | 🏰 | Disney | avatars/jerry.png |
 | Paul | 🐶 | Dogs | avatars/paul.png |
 
 ---
@@ -51,107 +51,119 @@ Suitable for ages 5 and up.
 
 Each puzzle randomly selects the required number of family members from the full pool of 14.
 
-| Setting | Easy | Medium | Hard |
-|---------|------|--------|------|
-| Pairs | 5 | 8 | 10 |
-| Grid (portrait) | 5 × 6 | 6 × 9 | 7 × 12 |
-| Grid (landscape) | 6 × 5 | 9 × 6 | 12 × 7 |
-| Colour hints | ✅ Yes | ❌ No | ❌ No |
-| Min path length | 3 cells | 4 cells | 6 cells |
-| Min endpoint distance | 2 (Manhattan) | 3 (Manhattan) | 5 (Manhattan) |
-| Min board fill | 80% | 80% | 90% |
-| Max gen attempts | 300 | 500 | 1000 |
-| Path stop probability | 0.15 | 0.09 | 0.03 |
+| Setting | Easy | Medium | Hard | Advanced |
+|---------|------|--------|------|----------|
+| Pairs | 4 | 6 | 10 | 10 |
+| Wildcards | 0 | 3 | 4 | 4 |
+| Grid | 3 × 3 | 4 × 4 | 5 × 5 | 5 × 5 |
+| Total tiles | 8 + 1 blank | 12 + 3W + 1 blank | 20 + 4W + 1 blank | 20 + 4W + 1 blank |
+| Colour hints | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| Shuffle moves | 30 | 80 | 150 | 150 |
+| Memory mode | ❌ | ❌ | ❌ | ✅ Yes |
 
-**Colour hints (Easy only):** each endpoint tile has a faint coloured border matching its pair — the name tile and its emoji share the same tint so young players can see what connects to what.
+**Colour hints (Easy only):** each name tile and its emoji share a coloured border — young players can use this to identify pairs before they know the family members.
+
+**Wildcards:** random holiday/Lanzarote-themed emoji tiles (`🌋 ☀️ 🌊 🏖️ 🦎 🌴`) that fill out the grid. They are not part of any pair and cannot be matched.
 
 ---
 
 ## Game Mechanics
 
 ### Goal
-Connect each name tile to its correct emoji tile by drawing a lava-flow path. All pairs must be matched to win.
+Slide the tiles around so that each name/photo tile is **orthogonally adjacent** (touching horizontally or vertically) to its correct emoji tile. All pairs must be adjacent simultaneously to win.
 
 ### Matching rule
-The player must **guess** which emoji belongs to which name — there is no automatic colour-coding on Medium/Hard. Knowing the family is part of the puzzle.
+The player must **know** (or guess) which emoji belongs to which family member — there is no automatic colour coding on Medium/Hard/Advanced. Knowing the family is part of the puzzle.
 
-### Drawing paths
-- Tap/press on a name or emoji endpoint to begin drawing.
-- Drag through adjacent cells (orthogonal only, no diagonals) to route the path.
-- Dragging back over your own path **backtracks** it.
-- Paths cannot cross locked paths from other pairs.
-- Paths cannot pass through other pairs' endpoint tiles.
+### Sliding tiles
+- Tap any tile that is directly adjacent (horizontal or vertical) to the single blank space → it slides smoothly into the blank.
+- Only one tile can move per tap.
+- No drag — tap only.
 
-### Completing a connection
-- Release on the **correct** opposite endpoint → path locks in, glows with its pair colour.
-- Release on the **wrong** endpoint → red flash animation, path clears immediately.
-- Release anywhere else → path silently clears.
+### Match feedback
+- When a name tile and its emoji tile become adjacent, both tiles **glow** with their pair colour (pulsing box-shadow).
+- The glow disappears if they are separated again.
 
 ### Undo
-- The ↩ button in the HUD undoes the most recently locked pair, restoring those cells to empty.
-- Can be pressed repeatedly to undo multiple pairs in reverse order.
-- Has no effect on the currently active (in-progress) drag.
+- The ↩ button reverses the most recent slide.
+- Can be pressed repeatedly to undo multiple slides in reverse order.
+- Disabled when no history exists.
 
 ### Win condition
-All pairs correctly connected → win screen appears after a 350ms delay.
+All pairs simultaneously adjacent → win screen appears after a 350ms delay.
+
+---
+
+## Advanced Mode — Memory Mechanic
+
+In Advanced mode, all tile faces are **hidden** at the start (transparent content, tile outlines only visible). The mechanic:
+
+- **On each slide:** the moved tile becomes fully visible (age 4).
+- **Each subsequent move:** all non-moving tiles fade by one step. After 4 more moves the tile is fully hidden again.
+- **Matched pairs:** when a pair becomes adjacent and glows, both tiles are forced fully visible and stay visible for as long as they remain matched.
+- **Age → opacity mapping:**
+
+| Age | Opacity | Meaning |
+|-----|---------|---------|
+| 0 | 0% | Hidden (forgotten) |
+| 1 | 25% | Fading fast |
+| 2 | 50% | Fading |
+| 3 | 75% | Recently moved |
+| 4 | 100% | Just moved / matched |
+
+- **Start guarantee:** no name+emoji pair starts adjacent — the puzzle would otherwise be trivially won by the glow appearing immediately.
 
 ---
 
 ## Level Generation
 
-Levels are **randomly generated** on every game start — there are no fixed pre-made levels.
+Levels are **randomly generated** on every game start.
 
 ### Algorithm
 1. Shuffle the 14-member family pool, select `cfg.pairs` members.
-2. For each pair, grow a random path through empty cells:
-   - Only start from cells with ≥ `minPathLen` reachable empty cells (flood-fill check).
-   - Walk to adjacent empty cells, preferring moves that don't isolate the remaining empty region.
-   - Stop randomly once length ≥ `minPathLen` (probability `stopProb` per step).
-   - Reject if path is shorter than `minPathLen`.
-   - Reject if Manhattan distance between the two endpoints is less than `minEndDist`.
-3. After all pairs are placed, reject the board if filled cells ÷ total cells < `minFill`.
-4. Retry up to `maxAttempts` times. If all attempts fail, fall back one difficulty level.
-5. Return only the **endpoint positions** — the generated paths are discarded. The player must find their own valid routes.
-
-### Why endpoint distance matters
-The generated path may wind through 6+ cells, but if the two endpoints happen to be adjacent the player can draw a trivial 2-cell shortcut. Enforcing `minEndDist` prevents this regardless of the board density.
+2. Build a **solved state**: names placed in even rows (0, 2, 4…), emoji directly below in odd rows. This guarantees each pair is vertically adjacent in the solved state.
+3. Fill remaining cells (scanning from the end): one blank cell, then wildcard tiles.
+4. **Shuffle:** make K random valid slides from the solved state (never immediately reversing). Guaranteed solvable by construction.
+5. **Safety check:** verify the result isn't accidentally solved; re-shuffle in small bursts if so.
+6. **Advanced only:** verify no pair is adjacent at the start; re-shuffle if needed.
 
 ---
 
 ## Visual Design
 
 ### Theme
-Volcanic Lanzarote. Dark lava-rock grid, glowing orange/coloured path lines, fire-toned UI.
+Volcanic Lanzarote. Dark lava-rock background, glowing coloured tile borders and pulse animations, fire-toned UI.
 
 ### Colour palette
-| Pair | Path background | Accent / border | Emoji |
-|------|-----------------|-----------------|-------|
-| 0 | #7a3000 | #ff6600 | 🟠 orange |
-| 1 | #7a0e00 | #ff3300 | 🔴 red-orange |
-| 2 | #6a6000 | #ffdd00 | 🟡 yellow |
-| 3 | #005a50 | #00ccaa | 🟢 teal |
-| 4 | #4a1580 | #bb55ff | 🟣 purple |
-| 5 | #3a6000 | #88ff00 | 🟢 lime |
-| 6 | #004a70 | #00aaff | 🔵 blue |
-| 7 | #6a1545 | #ff44aa | 🩷 pink |
-| 8 | #6a4000 | #ff9900 | 🟠 amber |
-| 9 | #005535 | #00ffaa | 🟢 mint |
+| Pair index | Glow / border accent |
+|------------|----------------------|
+| 0 | #ff6600 orange |
+| 1 | #ff3300 red-orange |
+| 2 | #ffdd00 yellow |
+| 3 | #00ccaa teal |
+| 4 | #bb55ff purple |
+| 5 | #88ff00 lime |
+| 6 | #00aaff blue |
+| 7 | #ff44aa pink |
+| 8 | #ff9900 amber |
+| 9 | #00ffaa mint |
 
-App background: `#0d0400`. Grid cell: `#221008`. Cell border: `#3a1a08`.
+App background: `#0d0400`. Tile background: `#180a02`. Tile border default: `#4a2010`.
 
 ---
 
 ## Screens
 
 ### 1 — Title
-🌋 icon, "LANZAROTE FEVER" heading, "Family Connect" subtitle, Play button.
+🌋 icon, "LANZAROTE FEVER" heading, "Family Slide" subtitle, brief game instructions, Play button.
 
 ### 2 — Difficulty
-Three buttons: Easy / Medium / Hard with short descriptions. Back button.
+Four buttons: Easy / Medium / Hard / Advanced with short descriptions. Back button.
 
 ### 3 — Game
-- **HUD** (top bar): ← back, difficulty · solved/total pairs, ↩ undo.
-- **Grid**: fills available screen below HUD. Cell size computed to maximise grid within viewport.
+- **HUD** (top bar): ← back, difficulty · matched/total pairs, ↩ undo.
+- **Grid**: fills available screen below HUD. Cell size computed to maximise grid within viewport (minimum 40px).
+- **Grid padding:** 12px around the grid so match glow doesn't clip at the screen edge.
 - Responsive to orientation change (220ms debounce, restarts current puzzle).
 
 ### 4 — Win
@@ -162,9 +174,8 @@ Three buttons: Easy / Medium / Hard with short descriptions. Back button.
 ## Responsive Layout
 
 - **Mobile-only** design (no desktop breakpoints).
-- Cell size = `min(availableWidth / cols, availableHeight / rows)`, minimum 32px, no hard maximum.
-- Accounts for 3px gap between cells and 8px edge padding.
-- Portrait orientation uses `pCols × pRows`; landscape swaps to `pRows × pCols`.
+- Cell size = `min(availableWidth / cols, availableHeight / rows)`, minimum 40px.
+- Accounts for 3px gap between cells and grid-wrap padding.
 
 ---
 
@@ -184,6 +195,5 @@ Three buttons: Easy / Medium / Hard with short descriptions. Back button.
 
 ## Planned / Not Yet Implemented
 
-- Square photo avatars for the remaining 6 family members (Jon, Joanna, Rachel, Dave, Jerry, Paul).
-- Blocked "lava rock" cells as an additional difficulty mechanism.
+- Square photo avatars for all family members (currently partial coverage).
 - Shared-seed multiplayer: same puzzle for multiple players via URL seed parameter (`?seed=abc123`), compare times asynchronously.
