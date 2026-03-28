@@ -417,6 +417,21 @@ const LevelGen = {
     return n;
   },
 
+  // Returns array of free cell indices reachable from startIdx via flood-fill
+  floodReach(grid, startIdx, cols, rows) {
+    if (grid[startIdx] !== -1) return [];
+    const seen = new Uint8Array(grid.length);
+    seen[startIdx] = 1;
+    const q = [startIdx];
+    const result = [startIdx];
+    while (q.length) {
+      for (const nb of this.adj(q.pop(), cols, rows)) {
+        if (!seen[nb] && grid[nb] === -1) { seen[nb] = 1; q.push(nb); result.push(nb); }
+      }
+    }
+    return result;
+  },
+
   // Would marking cellIdx as used isolate any empty cells?
   wouldIsolate(grid, cellIdx, cols, rows) {
     grid[cellIdx] = 999;
@@ -471,16 +486,23 @@ const LevelGen = {
 
   // Backtracking DFS from startCi to endCi through empty cells.
   // Guaranteed to find a path if one exists. Returns path array or null.
+  // Prefers edge/wall cells over interior cells to leave the middle open for other pairs.
   routePath(grid, startCi, endCi, cols, rows) {
     const visited = new Uint8Array(grid.length);
     const path = [];
+    const edgeScore = (ci) => {
+      const r = (ci / cols) | 0, c = ci % cols;
+      return (r === 0 || r === rows - 1 ? 1 : 0) + (c === 0 || c === cols - 1 ? 1 : 0);
+    };
     const dfs = (ci) => {
       if (ci === endCi) { path.push(ci); return true; }
       if (visited[ci]) return false;
       visited[ci] = 1;
       path.push(ci);
+      // Shuffle first for randomness, then stable-sort to prefer edge cells
       const nbrs = this.shuffle(this.adj(ci, cols, rows))
-        .filter(n => (grid[n] === -1 || n === endCi) && !visited[n]);
+        .filter(n => (grid[n] === -1 || n === endCi) && !visited[n])
+        .sort((a, b) => edgeScore(b) - edgeScore(a));
       for (const n of nbrs) { if (dfs(n)) return true; }
       path.pop();
       return false;
@@ -501,22 +523,35 @@ const LevelGen = {
       const endpoints = [];
       let ok = true;
 
-      // Route each pair: pick endpoints from currently-free cells, then DFS
+      // Route each pair: pick endpoints from currently-free cells, then DFS.
+      // emojiCell is chosen only from cells reachable from nameCell and at
+      // least cfg.minEndDist away (guarantees path length ≥ minPathLen).
       for (let pi = 0; pi < cfg.pairs; pi++) {
         const free = allCells.filter(i => grid[i] === -1);
-        let nameCell, emojiCell;
+        const dist = (a, b) => Math.abs((a / cols | 0) - (b / cols | 0))
+                             + Math.abs((a % cols)     - (b % cols));
+        let nameCell, emojiCell, found = false;
         if (cfg.oppositeSides) {
-          const freeTop    = this.shuffle(free.filter(i => (i / cols | 0) < mid));
-          const freeBottom = this.shuffle(free.filter(i => (i / cols | 0) >= mid));
-          if (!freeTop.length || !freeBottom.length) { ok = false; break; }
-          nameCell  = freeTop[0];
-          emojiCell = freeBottom[0];
+          const freeTop = this.shuffle(free.filter(i => (i / cols | 0) < mid));
+          for (const nc of freeTop) {
+            const reachable = new Set(this.floodReach(grid, nc, cols, rows));
+            const cands = this.shuffle(
+              free.filter(i => (i / cols | 0) >= mid && reachable.has(i) && dist(nc, i) >= cfg.minEndDist)
+            );
+            if (cands.length) { nameCell = nc; emojiCell = cands[0]; found = true; break; }
+          }
         } else {
           const pool = this.shuffle(free);
-          if (pool.length < 2) { ok = false; break; }
-          nameCell  = pool[0];
-          emojiCell = pool[1];
+          for (let ni = 0; ni < pool.length; ni++) {
+            const nc = pool[ni];
+            const reachable = new Set(this.floodReach(grid, nc, cols, rows));
+            const cands = this.shuffle(
+              pool.filter((c, j) => j !== ni && reachable.has(c) && dist(nc, c) >= cfg.minEndDist)
+            );
+            if (cands.length) { nameCell = nc; emojiCell = cands[0]; found = true; break; }
+          }
         }
+        if (!found) { ok = false; break; }
         const path = this.routePath(grid, nameCell, emojiCell, cols, rows);
         if (!path || path.length < cfg.minPathLen) {
           console.log(`[LevelGen] attempt ${attempt}: pair ${pi} failed (len=${path?.length ?? 0})`);
@@ -836,7 +871,7 @@ window.addEventListener('resize', () => {
 // PWA SERVICE WORKER
 // ══════════════════════════════════════════════════════════════════════════
 
-const BUILD_TIME = '28 Mar 2026 11:34';
+const BUILD_TIME = '28 Mar 2026 11:43';
 const isPWA = window.matchMedia('(display-mode: standalone)').matches
            || window.navigator.standalone === true;
 document.getElementById('build-ts').textContent = `${isPWA ? 'PWA' : 'web'} · ${BUILD_TIME}`;
