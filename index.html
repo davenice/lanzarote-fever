@@ -480,7 +480,7 @@ const LevelGen = {
       visited[ci] = 1;
       path.push(ci);
       const nbrs = this.shuffle(this.adj(ci, cols, rows))
-        .filter(n => (grid[n] === -1 || n === endCi) && !visited[n]);
+        .filter(n => (grid[n] === -1 || grid[n] === 99 || n === endCi) && !visited[n]);
       for (const n of nbrs) { if (dfs(n)) return true; }
       path.pop();
       return false;
@@ -533,6 +533,13 @@ const LevelGen = {
           ok = false; break;
         }
         path.forEach(ci => { grid[ci] = pi; });
+        // Reject if this path consumed a future pair's endpoint cell
+        const stomped = nameCells.slice(pi + 1).concat(emojiCells.slice(pi + 1))
+          .some(ci => grid[ci] === pi);
+        if (stomped) {
+          console.log(`[LevelGen] attempt ${attempt}: pair ${pi} stomped a future endpoint`);
+          ok = false; break;
+        }
         endpoints.push(
           { pairIndex: pi, kind: 'name',  cellIndex: nameCells[pi]  },
           { pairIndex: pi, kind: 'emoji', cellIndex: emojiCells[pi] }
@@ -846,7 +853,7 @@ window.addEventListener('resize', () => {
 // PWA SERVICE WORKER
 // ══════════════════════════════════════════════════════════════════════════
 
-const BUILD_TIME = '28 Mar 2026 10:24';
+const BUILD_TIME = '28 Mar 2026 10:36';
 const isPWA = window.matchMedia('(display-mode: standalone)').matches
            || window.navigator.standalone === true;
 document.getElementById('build-ts').textContent = `${isPWA ? 'PWA' : 'web'} · ${BUILD_TIME}`;
