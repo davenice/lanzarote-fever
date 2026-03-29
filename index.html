@@ -370,6 +370,7 @@ const FAMILY = [
   { id: 'micah',   name: 'Micah',   emoji: '🏏' },
   { id: 'clara',   name: 'Clara',   emoji: '🍬' },
   { id: 'esther',  name: 'Esther',  emoji: '🐯' },
+  { id: 'henry',   name: 'Henry',   emoji: '🦴' },
   // Adults
   { id: 'jon',     name: 'Jon',     emoji: '🏃' },
   { id: 'joanna',  name: 'Joanna',  emoji: '🎨' },
@@ -378,7 +379,7 @@ const FAMILY = [
   { id: 'granny',  name: 'Granny',  emoji: '🧵' },
   { id: 'grandpa', name: 'Grandpa', emoji: '📐' },
   { id: 'jerry',   name: 'Jerry',   emoji: '🏰' },
-  { id: 'paul',    name: 'Paul',    emoji: '🐶' },
+  { id: 'paul',    name: 'Paul',    emoji: '☕' },
 ];
 
 const WILDCARDS = ['🌋', '☀️', '🌊', '🏖️', '🦎', '🌴'];
@@ -810,7 +811,7 @@ window.addEventListener('resize', () => {
 // PWA SERVICE WORKER
 // ══════════════════════════════════════════════════════════════════════════
 
-const BUILD_TIME = '28 Mar 2026 19:35';
+const BUILD_TIME = '29 Mar 2026 21:53';
 const isPWA = window.matchMedia('(display-mode: standalone)').matches
            || window.navigator.standalone === true;
 document.getElementById('build-ts').textContent = `${isPWA ? 'PWA' : 'web'} · ${BUILD_TIME}`;

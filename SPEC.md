@@ -21,6 +21,7 @@ Suitable for ages 5 and up.
 | Micah | 🏏 | Cricket | avatars/micah.png |
 | Clara | 🍬 | Sweets | avatars/clara.png |
 | Esther | 🐯 | Tigers | avatars/esther.png |
+| Henry | 🦴 | Dog (bone) | avatars/henry.png |
 
 ### Adults
 | Name | Emoji | Interest | Avatar file |
@@ -32,7 +33,7 @@ Suitable for ages 5 and up.
 | Granny | 🧵 | Sewing | avatars/granny.png |
 | Grandpa | 📐 | Maths | avatars/grandpa.png |
 | Jerry | 🏰 | Disney | avatars/jerry.png |
-| Paul | 🐶 | Dogs | avatars/paul.png |
+| Paul | ☕ | Tea | avatars/paul.png |
 
 ---
 
